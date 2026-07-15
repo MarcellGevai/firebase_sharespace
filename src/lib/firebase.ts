@@ -18,6 +18,8 @@ const firebaseConfig = {
 // getApps() guard keeps HMR / double-import from re-initializing.
 export const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
+// Named (non-default) Firestore database. Must match the id in .firebaserc /
+// firebase.json so app writes and deployed rules/indexes target the same DB.
+export const db: Firestore = getFirestore(app, 'sharespace-db');
 export const storage: FirebaseStorage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();

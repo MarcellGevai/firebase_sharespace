@@ -21,6 +21,7 @@
 		]
 	},
 	"firestore": {
+		"database": "sharespace-db",
 		"rules": "firestore.rules",
 		"indexes": "firestore.indexes.json"
 	},

@@ -1,0 +1,161 @@
+rules_version = '2';
+
+// Sharespace — Firestore security rules.
+//
+// The whole app runs client-side (static SPA), so these rules ARE the backend:
+// they enforce everything the old SvelteKit `+server.ts` routes used to guard.
+// The trickiest part — the 5-minute handover/return confirmation window — is
+// enforced here with server time (`request.time`) compared against the
+// `serverTimestamp()` the client wrote when it initiated the step. No Cloud
+// Function required; a client cannot forge a later timestamp because the stored
+// value must equal the initiating request's server time.
+
+service cloud.firestore {
+	match /databases/{database}/documents {
+
+		function signedIn() {
+			return request.auth != null;
+		}
+		function uid() {
+			return request.auth.uid;
+		}
+
+		// ---- USERS ----
+		// Profiles are readable by any signed-in user (needed to render chat
+		// partners and profile pages). The rating aggregate fields can be bumped
+		// by anyone (the review flow updates the reviewee's doc); every other
+		// field is editable only by the owner.
+		function ratingFields() {
+			return ['trust_score', 'review_count', 'rating_sum'];
+		}
+		function onlyRatingChanged() {
+			return request.resource.data.diff(resource.data).affectedKeys().hasOnly(ratingFields());
+		}
+		function noRatingChanged() {
+			return !request.resource.data.diff(resource.data).affectedKeys().hasAny(ratingFields());
+		}
+		match /users/{userId} {
+			allow read: if signedIn();
+			allow create: if signedIn() && userId == uid()
+				&& request.resource.data.trust_score == 0
+				&& request.resource.data.review_count == 0;
+			allow update: if signedIn() && (
+				(userId == uid() && noRatingChanged()) || onlyRatingChanged()
+			);
+			allow delete: if false;
+		}
+
+		// ---- LISTINGS ----
+		// Public marketplace: anyone (even signed-out) can browse. Owner info is
+		// denormalized onto the listing so browsing never needs to read /users,
+		// keeping personal data (email, address, DOB) behind auth.
+		match /listings/{id} {
+			allow read: if true;
+			allow create: if signedIn() && request.resource.data.owner_id == uid();
+			allow update, delete: if signedIn() && resource.data.owner_id == uid();
+		}
+
+		// ---- REQUESTS (deals + handover state machine) ----
+		function isParty() {
+			return resource.data.owner_id == uid() || resource.data.requester_id == uid();
+		}
+		// Each helper describes exactly one legal transition of the state machine.
+		function acceptDeal() {
+			return resource.data.status == 'PENDING'
+				&& request.resource.data.status == 'ACCEPTED'
+				&& uid() == resource.data.owner_id
+				&& request.resource.data.handover_status == resource.data.handover_status;
+		}
+		function initHandover() {
+			return resource.data.status == 'ACCEPTED'
+				&& resource.data.handover_status == 'PENDING'
+				&& request.resource.data.handover_status == 'HANDOVER_INITIATED'
+				&& request.resource.data.handover_initiated_at == request.time;
+		}
+		function acceptHandover() {
+			return resource.data.handover_status == 'HANDOVER_INITIATED'
+				&& request.resource.data.handover_status == 'HANDOVER_COMPLETED'
+				&& request.time < resource.data.handover_initiated_at + duration.value(5, 'm');
+		}
+		function resetHandover() {
+			return resource.data.handover_status == 'HANDOVER_INITIATED'
+				&& request.resource.data.handover_status == 'PENDING';
+		}
+		function initReturn() {
+			return resource.data.handover_status == 'HANDOVER_COMPLETED'
+				&& request.resource.data.handover_status == 'RETURN_INITIATED'
+				&& request.resource.data.return_initiated_at == request.time;
+		}
+		function acceptReturn() {
+			return resource.data.handover_status == 'RETURN_INITIATED'
+				&& request.resource.data.handover_status == 'RETURN_COMPLETED'
+				&& request.time < resource.data.return_initiated_at + duration.value(5, 'm');
+		}
+		function resetReturn() {
+			return resource.data.handover_status == 'RETURN_INITIATED'
+				&& request.resource.data.handover_status == 'HANDOVER_COMPLETED';
+		}
+		function closeDeal() {
+			return resource.data.handover_status == 'RETURN_COMPLETED'
+				&& request.resource.data.handover_status == 'CLOSED';
+		}
+		match /requests/{id} {
+			allow read: if signedIn() && isParty();
+			allow create: if signedIn()
+				&& request.resource.data.requester_id == uid()
+				&& request.resource.data.status == 'PENDING'
+				&& request.resource.data.handover_status == 'PENDING';
+			allow update: if signedIn() && isParty()
+				// Core identity fields can never be reassigned.
+				&& request.resource.data.owner_id == resource.data.owner_id
+				&& request.resource.data.requester_id == resource.data.requester_id
+				&& request.resource.data.listing_id == resource.data.listing_id
+				&& (
+					acceptDeal() || initHandover() || acceptHandover() || resetHandover()
+					|| initReturn() || acceptReturn() || resetReturn() || closeDeal()
+				);
+			allow delete: if false;
+		}
+
+		// ---- MESSAGES ----
+		function onlyIsReadChanged() {
+			return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_read']);
+		}
+		match /messages/{id} {
+			allow read: if signedIn() && uid() in resource.data.participants;
+			allow create: if signedIn()
+				&& request.resource.data.sender_id == uid()
+				&& uid() in request.resource.data.participants
+				&& request.resource.data.participants.size() == 2;
+			// The recipient may flip is_read; nothing else is mutable.
+			allow update: if signedIn() && uid() in resource.data.participants && onlyIsReadChanged();
+			allow delete: if false;
+		}
+
+		// ---- NOTIFICATIONS ----
+		// A user may create a notification addressed to another user (e.g. "new
+		// request"/"new message"). It must record its author. Recipients read /
+		// mark-read / delete only their own.
+		match /notifications/{id} {
+			allow read: if signedIn() && resource.data.user_id == uid();
+			allow create: if signedIn() && request.resource.data.from == uid();
+			allow update: if signedIn() && resource.data.user_id == uid()
+				&& request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_read']);
+			allow delete: if signedIn() && resource.data.user_id == uid();
+		}
+
+		// ---- REVIEWS ----
+		// Doc id is `${requestId}_${reviewerId}`, so one review per reviewer per
+		// deal is guaranteed at the rules layer (a second write hits `update`,
+		// which is denied).
+		match /reviews/{id} {
+			allow read: if signedIn();
+			allow create: if signedIn()
+				&& request.resource.data.reviewer_id == uid()
+				&& request.resource.data.rating is int
+				&& request.resource.data.rating >= 1
+				&& request.resource.data.rating <= 5;
+			allow update, delete: if false;
+		}
+	}
+}

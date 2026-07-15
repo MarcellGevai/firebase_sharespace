@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Listing images. Anyone can view them (public marketplace); a user may only
+// write into their own folder, images only, max 5 MB — the same limits the old
+// /api/upload endpoint enforced.
+service firebase.storage {
+	match /b/{bucket}/o {
+		match /listings/{userId}/{fileName} {
+			allow read: if true;
+			allow write: if request.auth != null
+				&& request.auth.uid == userId
+				&& request.resource.size < 5 * 1024 * 1024
+				&& request.resource.contentType.matches('image/.*');
+		}
+	}
+}

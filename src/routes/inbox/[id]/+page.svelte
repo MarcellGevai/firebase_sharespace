@@ -15,7 +15,7 @@
 		sendMessage,
 		type ChatMessage
 	} from '$lib/data/messages';
-	import { getRequestForConversation } from '$lib/data/requests';
+	import { watchRequestForConversation } from '$lib/data/requests';
 	import { createNotification } from '$lib/data/notifications';
 	import { hasReviewed } from '$lib/data/reviews';
 
@@ -86,7 +86,8 @@
 		}
 		const { listingId, otherUserId } = parsed;
 
-		let unsub = () => {};
+		let unsubMessages = () => {};
+		let unsubRequest = () => {};
 
 		(async () => {
 			const [otherUser, listing] = await Promise.all([
@@ -99,27 +100,26 @@
 			}
 			chatContext = { otherUser, listing, listingId, otherUserId };
 
-			// Load the deal (if any) plus whether the current user already reviewed it.
-			// Best-effort: a failure here (e.g. no deal exists yet) must not stop the
-			// message subscription below from being set up.
-			try {
-				const req = await getRequestForConversation(listingId, me.id, otherUserId);
+			// Live deal/offer state - updates automatically when either party
+			// accepts/rejects/initiates handover/etc, no manual refresh needed.
+			unsubRequest = watchRequestForConversation(listingId, me.id, otherUserId, async (req) => {
 				if (req) {
 					req.has_reviewed = await hasReviewed(req.id, me.id);
-					request = req;
 				}
-			} catch (err) {
-				console.error('getRequestForConversation failed', err);
-			}
+				request = req;
+			});
 
 			// Mark inbound messages read, then subscribe for realtime updates.
 			markConversationRead(listingId, me.id, otherUserId).catch(() => {});
-			unsub = watchConversation(listingId, me.id, otherUserId, (list) => {
+			unsubMessages = watchConversation(listingId, me.id, otherUserId, (list) => {
 				messages = list;
 			});
 		})();
 
-		return () => unsub();
+		return () => {
+			unsubMessages();
+			unsubRequest();
+		};
 	});
 </script>
 

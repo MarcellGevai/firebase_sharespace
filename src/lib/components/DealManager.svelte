@@ -45,7 +45,10 @@
 		actionInFlight = true;
 		try {
 			await handoverAction(request.id, actionType);
-			window.location.reload();
+			// The parent page's live listener (watchRequestForConversation) picks up
+			// this write and updates `request` automatically - no reload needed.
+			showHandoverModal = false;
+			actionInFlight = false;
 		} catch (error) {
 			console.error(error);
 			// A denied "accept" almost always means the 5-minute confirmation
@@ -102,7 +105,8 @@
 				end_date: editEndDate,
 				price_offer: editPrice
 			});
-			window.location.reload();
+			showEditTerms = false;
+			editSubmitting = false;
 		} catch (error) {
 			console.error(error);
 			editError = 'A módosítás nem sikerült.';

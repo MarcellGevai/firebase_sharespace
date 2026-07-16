@@ -12,6 +12,7 @@ import {
 	where,
 	orderBy,
 	limit,
+	onSnapshot,
 	serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -65,6 +66,37 @@ export async function getRequestForConversation(
 	const match = snap.docs.find((d) => (d.data().participants ?? []).includes(userB));
 	if (!match) return null;
 	return { id: match.id, ...(match.data() as Omit<DealRequest, 'id'>) };
+}
+
+/**
+ * Live version of getRequestForConversation: the deal updates automatically
+ * when either party accepts/rejects/initiates handover/etc, no manual
+ * refresh needed. Returns the unsubscribe fn.
+ */
+export function watchRequestForConversation(
+	listingId: string,
+	userA: string,
+	userB: string,
+	cb: (request: DealRequest | null) => void
+): () => void {
+	const q = query(
+		collection(db, 'requests'),
+		where('listing_id', '==', listingId),
+		where('participants', 'array-contains', userA),
+		orderBy('created_at', 'desc'),
+		limit(20)
+	);
+	return onSnapshot(
+		q,
+		(snap) => {
+			const match = snap.docs.find((d) => (d.data().participants ?? []).includes(userB));
+			cb(match ? { id: match.id, ...(match.data() as Omit<DealRequest, 'id'>) } : null);
+		},
+		(err) => {
+			console.error('watchRequestForConversation error', err);
+			cb(null);
+		}
+	);
 }
 
 /** Every deal (any status) the user is a party to, newest first. */

@@ -223,6 +223,12 @@
 		map.on('load', () => {
 			mapLoaded = true;
 		});
+		// MapLibre's internal ResizeObserver discards its first callback (assumes
+		// the constructor's synchronous measurement was already correct), so a
+		// container that settles into its final full-bleed size only after mount
+		// (e.g. returning here via client-side navigation) never gets picked up.
+		// Force one real measurement a frame after mount to correct that.
+		requestAnimationFrame(() => map.resize());
 
 		if ('geolocation' in navigator) {
 			watchId = navigator.geolocation.watchPosition(

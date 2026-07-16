@@ -9,7 +9,8 @@ import {
 	query,
 	where,
 	orderBy,
-	serverTimestamp
+	serverTimestamp,
+	writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Listing, ListingType } from '../types';
@@ -65,6 +66,32 @@ export async function createListing(owner: User, data: NewListing): Promise<stri
 		created_at: serverTimestamp()
 	});
 	return ref.id;
+}
+
+/**
+ * Push the owner's current public locality onto every listing they own.
+ *
+ * `owner_location` is a snapshot taken at creation time, and /listings is world
+ * readable - so a stale copy of an old, address-shaped `location` would stay
+ * publicly visible no matter what the /users doc says. Callers run this whenever
+ * the owner's location changes. Rules permit it: each write targets a doc whose
+ * owner_id is the caller.
+ *
+ * Best-effort by design: a failure here must not fail the profile save, but it
+ * does mean the listings keep the old value until the next attempt.
+ */
+export async function syncOwnerLocationToListings(
+	ownerId: string,
+	location: string
+): Promise<number> {
+	const snap = await getDocs(query(collection(db, 'listings'), where('owner_id', '==', ownerId)));
+	const stale = snap.docs.filter((d) => d.data().owner_location !== location);
+	if (stale.length === 0) return 0;
+
+	const batch = writeBatch(db);
+	for (const d of stale) batch.update(d.ref, { owner_location: location });
+	await batch.commit();
+	return stale.length;
 }
 
 function toListing(id: string, d: Record<string, unknown>): Listing {

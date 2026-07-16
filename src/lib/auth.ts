@@ -9,12 +9,22 @@ import {
 	signOut,
 	onAuthStateChanged,
 	sendEmailVerification,
-	updateProfile
+	updateProfile,
+	verifyBeforeUpdateEmail,
+	reauthenticateWithCredential,
+	EmailAuthProvider
 } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
 import { avatarUrl } from './avatar';
 import { geocodeAddress } from './geocode';
-import { getUserProfile, createUserProfile, ensureUserProfile } from './data/users';
+import {
+	getUserProfile,
+	createUserProfile,
+	ensureUserProfile,
+	setProfileEmail,
+	setProfileLocation
+} from './data/users';
+import { syncOwnerLocationToListings } from './data/listings';
 import type { User } from './types';
 
 export const currentUser = writable<User | null>(null);
@@ -46,7 +56,10 @@ export function initAuth(): void {
 	started = true;
 	onAuthStateChanged(auth, async (fbUser) => {
 		if (fbUser) {
-			currentUser.set(await getUserProfile(fbUser.uid));
+			// Via refreshProfile rather than getUserProfile directly, so a restored
+			// session (page reload) still gets the email reconcile and the one-off
+			// locality repair - not just fresh logins.
+			await refreshProfile();
 		} else {
 			currentUser.set(null);
 		}
@@ -61,7 +74,64 @@ export async function refreshProfile(): Promise<void> {
 		currentUser.set(null);
 		return;
 	}
-	currentUser.set(await getUserProfile(fbUser.uid));
+	const profile = await getUserProfile(fbUser.uid);
+	// The /users doc only carries a display copy of the email. An address change
+	// lands in Firebase Auth only once the user clicks the verification link, so
+	// this is where the two get reconciled - there is no callback for that click.
+	if (profile && fbUser.email && profile.email !== fbUser.email) {
+		await setProfileEmail(fbUser.uid, fbUser.email).catch(() => {});
+		profile.email = fbUser.email;
+	}
+	currentUser.set(profile);
+	// Deliberately not awaited: this makes a geocoding round-trip, and sign-in
+	// shouldn't block on it. It updates the store itself once done.
+	if (profile) healLeakedLocation(profile).catch((e) => console.error('location heal failed', e));
+}
+
+/**
+ * One-off repair for accounts registered before `location` became a coarse
+ * locality. Back then registration wrote the full street address into BOTH
+ * `location` and `address`, and `location` is denormalized onto /listings, which
+ * anyone can read - so those accounts are publishing their home address until
+ * this runs. Nothing server-side can fix it (no admin credentials here, and the
+ * rules only let a user write their own docs), so each account heals itself on
+ * next sign-in.
+ *
+ * `location === address` is the tell-tale of unrepaired data; it stops matching
+ * after the first success, so this is effectively once per account. On a
+ * geocoding failure it writes nothing and retries next time - better a retry
+ * than silently blanking someone's locality forever.
+ */
+async function healLeakedLocation(profile: User): Promise<void> {
+	if (!profile.address || profile.location !== profile.address) return;
+	const coords = await geocodeAddress(profile.address).catch(() => null);
+	if (!coords?.locality) return;
+	await setProfileLocation(profile.id, coords.locality);
+	await syncOwnerLocationToListings(profile.id, coords.locality).catch((e) =>
+		console.error('owner_location heal failed', e)
+	);
+	profile.location = coords.locality;
+	currentUser.set({ ...profile });
+}
+
+/** True when the account can reauthenticate with a password (i.e. not Google-only). */
+export function hasPasswordProvider(): boolean {
+	return (auth.currentUser?.providerData ?? []).some((p) => p.providerId === 'password');
+}
+
+/**
+ * Start a login-email change. Firebase will not swap the address on the spot:
+ * `verifyBeforeUpdateEmail` mails a link to the NEW address and only applies the
+ * change once it's clicked, which is also why the /users copy isn't written here
+ * (refreshProfile reconciles it afterwards). Requires a recent sign-in, hence
+ * the password re-prompt.
+ */
+export async function updateAccountEmail(newEmail: string, currentPassword: string): Promise<void> {
+	const user = auth.currentUser;
+	if (!user) throw new Error('Nincs bejelentkezett felhasználó.');
+	const cred = EmailAuthProvider.credential(user.email ?? '', currentPassword);
+	await reauthenticateWithCredential(user, cred);
+	await verifyBeforeUpdateEmail(user, newEmail);
 }
 
 export type RegisterInput = {
@@ -84,7 +154,10 @@ export async function register(input: RegisterInput): Promise<void> {
 		name: input.name,
 		email: input.email,
 		avatar_url: avatarUrl(input.gender, uid),
-		location: input.address,
+		// `location` is the public face of the account - it is denormalized onto
+		// listings, which anyone can read, so it must never carry the street.
+		// Falls back to empty rather than the raw address when geocoding fails.
+		location: coords?.locality ?? '',
 		address: input.address,
 		date_of_birth: input.date_of_birth,
 		gender: input.gender,

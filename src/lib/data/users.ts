@@ -1,5 +1,14 @@
 // User profiles live in /users/{uid} where uid is the Firebase Auth uid.
-import { doc, getDoc, setDoc, runTransaction, serverTimestamp, collection, getDocs } from 'firebase/firestore';
+import {
+	doc,
+	getDoc,
+	setDoc,
+	updateDoc,
+	runTransaction,
+	serverTimestamp,
+	collection,
+	getDocs
+} from 'firebase/firestore';
 import { db } from '../firebase';
 import type { User } from '../types';
 
@@ -44,6 +53,38 @@ export async function ensureUserProfile(uid: string, data: NewUserProfile): Prom
 		rating_sum: 0,
 		created_at: serverTimestamp()
 	});
+}
+
+export type EditableProfile = {
+	name: string;
+	address: string;
+	location: string;
+	date_of_birth?: string;
+	gender?: string;
+	avatar_url?: string;
+	latitude?: number | null;
+	longitude?: number | null;
+	email?: string;
+};
+
+/**
+ * Update the signed-in user's own profile. The security rules already restrict
+ * this to `userId == uid()` with the rating aggregate untouched, so nothing here
+ * needs to re-check ownership - but note `email` is only the display copy; the
+ * Firebase Auth login address is changed separately (see updateAccountEmail).
+ */
+export async function updateUserProfile(uid: string, data: EditableProfile): Promise<void> {
+	await updateDoc(doc(db, 'users', uid), { ...data });
+}
+
+/** Sync the display copy of the email after Firebase Auth's own address changes. */
+export async function setProfileEmail(uid: string, email: string): Promise<void> {
+	await updateDoc(doc(db, 'users', uid), { email });
+}
+
+/** Narrow write used by the one-off locality repair (see healLeakedLocation). */
+export async function setProfileLocation(uid: string, location: string): Promise<void> {
+	await updateDoc(doc(db, 'users', uid), { location });
 }
 
 /**

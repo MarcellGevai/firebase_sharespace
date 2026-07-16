@@ -6,13 +6,24 @@
 	import { currentUser } from '$lib/auth';
 	import { getUserProfile } from '$lib/data/users';
 	import { getReviewsForUser } from '$lib/data/reviews';
-	import { Star } from 'lucide-svelte';
+	import { Star, Pencil, Home } from 'lucide-svelte';
+	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
 	import type { User, Review } from '$lib/types';
 
 	let loading = $state(true);
 	let notFound = $state(false);
 	let profile = $state<User | null>(null);
 	let reviews = $state<Review[]>([]);
+	let isEditOpen = $state(false);
+
+	// Only the owner ever sees the precise address. Everything rendered outside
+	// this guard is fair game for strangers, so keep address inside it.
+	let isOwnProfile = $derived(!!profile && $currentUser?.id === profile.id);
+
+	async function reloadProfile() {
+		if (!profile) return;
+		profile = await getUserProfile(profile.id);
+	}
 
 	function formatDate(ts: unknown): string {
 		const t = ts as { toDate?: () => Date; seconds?: number } | null | undefined;
@@ -60,14 +71,38 @@
 	{:else if notFound}
 		<div class="text-center p-8 text-gray-500">Ez a felhasználó nem található.</div>
 	{:else if profile}
-		<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center">
-			<img src={profile.avatar_url} alt={profile.name} class="w-24 h-24 rounded-full object-cover bg-gray-100 mb-4" />
-			<h1 class="text-2xl font-bold text-gray-900">{profile.name}</h1>
-			<p class="text-sm text-gray-500 mt-1">{profile.location}</p>
-			<div class="flex items-center gap-1.5 mt-3 text-yellow-500 font-semibold">
-				<Star class="w-5 h-5 fill-yellow-400 text-yellow-400" />
-				{profile.trust_score ?? 0}
-				<span class="text-gray-400 font-normal text-sm">({profile.review_count ?? 0} értékelés)</span>
+		<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 relative">
+			{#if isOwnProfile}
+				<button
+					onclick={() => (isEditOpen = true)}
+					class="absolute top-4 right-4 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+				>
+					<Pencil class="w-4 h-4" /> Szerkesztés
+				</button>
+			{/if}
+
+			<div class="flex flex-col items-center text-center">
+				<img src={profile.avatar_url} alt={profile.name} class="w-24 h-24 rounded-full object-cover bg-gray-100 mb-4" />
+				<h1 class="text-2xl font-bold text-gray-900">{profile.name}</h1>
+				{#if profile.location}
+					<p class="text-sm text-gray-500 mt-1">{profile.location}</p>
+				{/if}
+				<div class="flex items-center gap-1.5 mt-3 text-yellow-500 font-semibold">
+					<Star class="w-5 h-5 fill-yellow-400 text-yellow-400" />
+					{profile.trust_score ?? 0}
+					<span class="text-gray-400 font-normal text-sm">({profile.review_count ?? 0} értékelés)</span>
+				</div>
+
+				<!-- Owner-only. The precise address must never render on a public view. -->
+				{#if isOwnProfile && profile.address}
+					<div class="mt-4 w-full border-t border-gray-100 pt-4 flex items-start gap-2 text-left">
+						<Home class="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+						<div class="min-w-0">
+							<p class="text-sm text-gray-700 break-words">{profile.address}</p>
+							<p class="text-xs text-gray-400 mt-0.5">Csak te látod – másoknak csak a település jelenik meg.</p>
+						</div>
+					</div>
+				{/if}
 			</div>
 		</div>
 
@@ -101,5 +136,11 @@
 				{/each}
 			{/if}
 		</div>
+
+		<!-- Mounted only while open, so the form re-seeds from the current profile
+		     each time rather than keeping the values it captured on first mount. -->
+		{#if isOwnProfile && isEditOpen}
+			<EditProfileModal bind:isOpen={isEditOpen} {profile} onSaved={reloadProfile} />
+		{/if}
 	{/if}
 </div>

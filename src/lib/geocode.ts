@@ -19,13 +19,43 @@ const BUDAPEST_BIAS = { lat: 47.4979, lon: 19.0402 };
 
 export type AddressSuggestion = { display_name: string; lat: number; lon: number };
 
-export async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+export type GeocodeResult = {
+	lat: number;
+	lon: number;
+	/**
+	 * Coarse, publicly-showable place name ("Budapest, XI. kerület") derived from
+	 * the same lookup. Never contains the street or house number - it is what gets
+	 * denormalized onto listings, which anyone can read.
+	 */
+	locality: string;
+};
+
+/**
+ * Collapse Nominatim's address breakdown into something safe to show strangers.
+ * Returns '' rather than guessing when nothing coarse is available: an empty
+ * locality is a cosmetic gap, whereas falling back to the raw input would put a
+ * home address back on a public listing.
+ */
+function localityFrom(addr: Record<string, string | undefined> | undefined): string {
+	if (!addr) return '';
+	const city = addr.city ?? addr.town ?? addr.village ?? addr.municipality ?? addr.county ?? '';
+	// Budapest districts come back as `borough` ("XI. kerület"); `suburb` is the
+	// finer neighbourhood ("Lágymányos") and is only a fallback. Other Hungarian
+	// towns generally have neither, leaving just the city name.
+	const district = addr.city_district ?? addr.borough ?? addr.district ?? addr.suburb ?? '';
+	if (city && district && district !== city) return `${city}, ${district}`;
+	return city || district || '';
+}
+
+export async function geocodeAddress(address: string): Promise<GeocodeResult | null> {
 	if (!address.trim()) return null;
 	const params = new URLSearchParams({
 		q: address,
 		format: 'json',
 		limit: '1',
-		countrycodes: 'hu'
+		countrycodes: 'hu',
+		// Comes back in the same response, so the coarse locality costs no extra call.
+		addressdetails: '1'
 	});
 
 	try {
@@ -35,7 +65,11 @@ export async function geocodeAddress(address: string): Promise<{ lat: number; lo
 		if (!res.ok) return null;
 		const results = await res.json();
 		if (!results.length) return null;
-		return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
+		return {
+			lat: parseFloat(results[0].lat),
+			lon: parseFloat(results[0].lon),
+			locality: localityFrom(results[0].address)
+		};
 	} catch (err) {
 		console.error('Geocoding request failed:', err);
 		return null;

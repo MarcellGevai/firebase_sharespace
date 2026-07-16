@@ -80,6 +80,10 @@ export type DealRequest = {
 	end_date: string;
 	status: RequestStatus;
 	price_offer: number;
+	// Pre-acceptance ping-pong negotiation: whoever this points to may currently
+	// accept/reject/modify the offer above. Absent on requests created before
+	// this field existed - treat missing as "owner_id" (today's default).
+	awaiting_response_from?: string;
 	handover_status: HandoverStatus;
 	handover_initiated_at?: unknown;
 	return_initiated_at?: unknown;

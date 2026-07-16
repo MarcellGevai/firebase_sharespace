@@ -32,6 +32,8 @@ export async function createRequest(data: NewRequest): Promise<string> {
 		...data,
 		participants: [data.owner_id, data.requester_id],
 		status: 'PENDING',
+		// The requester makes the opening offer, so the owner responds first.
+		awaiting_response_from: data.owner_id,
 		handover_status: 'PENDING',
 		handover_initiated_at: null,
 		return_initiated_at: null,
@@ -130,6 +132,26 @@ export async function updateDealTerms(requestId: string, terms: HandoverTerms): 
 		start_date: terms.start_date,
 		end_date: terms.end_date,
 		price_offer: terms.price_offer
+	});
+}
+
+/**
+ * Counter-offer during the pre-acceptance ping-pong negotiation: updates the
+ * proposed dates/price and hands the turn to the other party. `nextResponder`
+ * is whichever of owner_id/requester_id isn't the caller - the caller already
+ * has both on hand from the request they're viewing.
+ */
+export async function modifyOffer(
+	requestId: string,
+	nextResponder: string,
+	terms: HandoverTerms
+): Promise<void> {
+	const ref = doc(db, 'requests', requestId);
+	await updateDoc(ref, {
+		start_date: terms.start_date,
+		end_date: terms.end_date,
+		price_offer: terms.price_offer,
+		awaiting_response_from: nextResponder
 	});
 }
 

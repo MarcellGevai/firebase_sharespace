@@ -68,17 +68,34 @@ service cloud.firestore {
 		function isParty() {
 			return uid() in resource.data.participants;
 		}
+		// Pre-acceptance ping-pong negotiation: whoever awaiting_response_from
+		// points to may currently accept/reject/counter-offer. The .get() default
+		// means requests written before this field existed keep today's
+		// owner-responds-first behavior with no migration needed.
+		function isAwaited() {
+			return uid() == resource.data.get('awaiting_response_from', resource.data.owner_id);
+		}
+		function otherParty() {
+			return uid() == resource.data.owner_id ? resource.data.requester_id : resource.data.owner_id;
+		}
 		// Each helper describes exactly one legal transition of the state machine.
 		function acceptDeal() {
 			return resource.data.status == 'PENDING'
 				&& request.resource.data.status == 'ACCEPTED'
-				&& uid() == resource.data.owner_id
+				&& isAwaited()
 				&& request.resource.data.handover_status == resource.data.handover_status;
 		}
 		function rejectDeal() {
 			return resource.data.status == 'PENDING'
 				&& request.resource.data.status == 'REJECTED'
-				&& uid() == resource.data.owner_id
+				&& isAwaited()
+				&& request.resource.data.handover_status == resource.data.handover_status;
+		}
+		function modifyOffer() {
+			return resource.data.status == 'PENDING'
+				&& request.resource.data.status == 'PENDING'
+				&& isAwaited()
+				&& request.resource.data.awaiting_response_from == otherParty()
 				&& request.resource.data.handover_status == resource.data.handover_status;
 		}
 		function initHandover() {
@@ -131,6 +148,7 @@ service cloud.firestore {
 			allow create: if signedIn()
 				&& request.resource.data.requester_id == uid()
 				&& request.resource.data.status == 'PENDING'
+				&& request.resource.data.awaiting_response_from == request.resource.data.owner_id
 				&& request.resource.data.handover_status == 'PENDING'
 				&& uid() in request.resource.data.participants
 				&& request.resource.data.participants.size() == 2;
@@ -141,8 +159,9 @@ service cloud.firestore {
 				&& request.resource.data.listing_id == resource.data.listing_id
 				&& request.resource.data.participants == resource.data.participants
 				&& (
-					acceptDeal() || rejectDeal() || initHandover() || acceptHandover() || resetHandover()
-					|| updateTerms() || initReturn() || acceptReturn() || resetReturn() || closeDeal()
+					acceptDeal() || rejectDeal() || modifyOffer() || initHandover() || acceptHandover()
+					|| resetHandover() || updateTerms() || initReturn() || acceptReturn() || resetReturn()
+					|| closeDeal()
 				);
 			allow delete: if false;
 		}

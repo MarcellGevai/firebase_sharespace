@@ -62,9 +62,14 @@ export function watchConversation(
 	cb: (messages: ChatMessage[]) => void
 ): () => void {
 	const convId = conversationKey(listingId, me, other);
+	// The `participants` filter is redundant with `conversation_id` (which already
+	// encodes both user ids) but is required for the security rules engine to
+	// statically prove `uid() in resource.data.participants` holds for a list
+	// query — without it Firestore rejects the whole query as permission-denied.
 	const q = query(
 		collection(db, 'messages'),
 		where('conversation_id', '==', convId),
+		where('participants', 'array-contains', me),
 		orderBy('created_at', 'asc')
 	);
 	return onSnapshot(
@@ -143,9 +148,12 @@ export async function markConversationRead(
 	other: string
 ): Promise<void> {
 	const convId = conversationKey(listingId, me, other);
+	// See the comment in watchConversation: the security rule needs `participants`
+	// in the query's own filters to allow the list, not just `conversation_id`.
 	const q = query(
 		collection(db, 'messages'),
 		where('conversation_id', '==', convId),
+		where('participants', 'array-contains', me),
 		where('receiver_id', '==', me),
 		where('is_read', '==', false)
 	);

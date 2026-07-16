@@ -100,10 +100,16 @@
 			chatContext = { otherUser, listing, listingId, otherUserId };
 
 			// Load the deal (if any) plus whether the current user already reviewed it.
-			const req = await getRequestForConversation(listingId, me.id, otherUserId);
-			if (req) {
-				req.has_reviewed = await hasReviewed(req.id, me.id);
-				request = req;
+			// Best-effort: a failure here (e.g. no deal exists yet) must not stop the
+			// message subscription below from being set up.
+			try {
+				const req = await getRequestForConversation(listingId, me.id, otherUserId);
+				if (req) {
+					req.has_reviewed = await hasReviewed(req.id, me.id);
+					request = req;
+				}
+			} catch (err) {
+				console.error('getRequestForConversation failed', err);
 			}
 
 			// Mark inbound messages read, then subscribe for realtime updates.

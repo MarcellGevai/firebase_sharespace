@@ -33,18 +33,15 @@
 	}
 
 	function formatDuration(ms: number): string {
-		const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-		const days = Math.floor(totalSeconds / 86400);
-		const hours = Math.floor((totalSeconds % 86400) / 3600);
-		const minutes = Math.floor((totalSeconds % 3600) / 60);
-		const seconds = totalSeconds % 60;
-		if (days > 0) return `${days}n ${hours}ó ${minutes}p`;
-		if (hours > 0) return `${hours}ó ${minutes}p`;
-		return `${minutes}p ${seconds}mp`;
+		const totalHours = Math.max(0, Math.floor(ms / 3600000));
+		const days = Math.floor(totalHours / 24);
+		const hours = totalHours % 24;
+		return `${days} nap ${hours} óra`;
 	}
 
 	onMount(() => {
-		const tickInterval = setInterval(() => (now = Date.now()), 1000);
+		// Display only changes at whole-hour granularity now, so no need to tick every second.
+		const tickInterval = setInterval(() => (now = Date.now()), 60000);
 
 		(async () => {
 			const me = get(currentUser);

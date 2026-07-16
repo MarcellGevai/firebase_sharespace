@@ -177,9 +177,13 @@
 					<span class="text-sm text-gray-500 italic self-center">Várakozás a másik fél megerősítésére (5 percen belül)...</span>
 				{/if}
 			{:else if isHandoverCompleted}
-				<button onclick={() => handleAction('init_return')} class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors flex items-center gap-1">
-					<Undo2 class="w-4 h-4" /> Visszaadás indítása
-				</button>
+				{#if isRequester}
+					<button onclick={() => handleAction('init_return')} class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors flex items-center gap-1">
+						<Undo2 class="w-4 h-4" /> Visszaadás indítása
+					</button>
+				{:else}
+					<span class="text-sm text-gray-500 italic self-center">Bérlés alatt - a bérlő indítja a visszaadást.</span>
+				{/if}
 			{:else if isReturnInitiated}
 				<button onclick={() => handleAction('accept_return')} class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
 					<Check class="w-4 h-4" /> Visszaadás megerősítése!

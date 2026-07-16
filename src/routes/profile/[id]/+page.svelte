@@ -6,15 +6,19 @@
 	import { currentUser } from '$lib/auth';
 	import { getUserProfile } from '$lib/data/users';
 	import { getReviewsForUser } from '$lib/data/reviews';
-	import { Star, Pencil, Home } from 'lucide-svelte';
+	import { getListingsByOwner } from '$lib/data/listings';
+	import { Star, Pencil, Home, Package } from 'lucide-svelte';
 	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
-	import type { User, Review } from '$lib/types';
+	import RequestModal from '$lib/components/RequestModal.svelte';
+	import type { User, Review, Listing } from '$lib/types';
 
 	let loading = $state(true);
 	let notFound = $state(false);
 	let profile = $state<User | null>(null);
 	let reviews = $state<Review[]>([]);
+	let listings = $state<Listing[]>([]);
 	let isEditOpen = $state(false);
+	let requestListing = $state<Listing | null>(null);
 
 	// Only the owner ever sees the precise address. Everything rendered outside
 	// this guard is fair game for strangers, so keep address inside it.
@@ -46,7 +50,11 @@
 				loading = false;
 				return;
 			}
-			const [userProfile, userReviews] = await Promise.all([getUserProfile(id), getReviewsForUser(id)]);
+			const [userProfile, userReviews, userListings] = await Promise.all([
+				getUserProfile(id),
+				getReviewsForUser(id),
+				getListingsByOwner(id)
+			]);
 			if (!userProfile) {
 				notFound = true;
 				loading = false;
@@ -54,6 +62,7 @@
 			}
 			profile = userProfile;
 			reviews = userReviews;
+			listings = userListings;
 			loading = false;
 		})();
 	});
@@ -137,10 +146,70 @@
 			{/if}
 		</div>
 
+		<!-- What this person currently has up. Only AVAILABLE listings: an
+		     UNAVAILABLE one isn't something a visitor can act on. -->
+		<div class="mt-6 space-y-3">
+			<h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+				<Package class="w-5 h-5 text-blue-600" />
+				{isOwnProfile ? 'Amit megosztasz' : 'Amit megoszt'}
+				<span class="text-sm font-semibold text-gray-400">({listings.length})</span>
+			</h2>
+
+			{#if listings.length === 0}
+				<p class="text-sm text-gray-500">
+					{isOwnProfile ? 'Még nincs aktív hirdetésed.' : 'Jelenleg nincs aktív hirdetése.'}
+				</p>
+			{:else}
+				<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+					{#each listings as listing (listing.id)}
+						<!-- There's no listing detail route, so the card opens the same
+						     RequestModal the feed uses. On your own profile there's nothing
+						     to request, so it stays a plain tile. -->
+						<svelte:element
+							this={isOwnProfile ? 'div' : 'button'}
+							onclick={isOwnProfile ? undefined : () => (requestListing = listing)}
+							class="text-left bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden {isOwnProfile
+								? ''
+								: 'hover:shadow-md hover:border-blue-200 transition-all'}"
+						>
+							<div class="aspect-square w-full bg-gray-100 overflow-hidden">
+								<img
+									src={listing.image_url}
+									alt={listing.title}
+									class="w-full h-full object-cover"
+									loading="lazy"
+								/>
+							</div>
+							<div class="p-2.5">
+								<p class="text-sm font-semibold text-gray-900 truncate">{listing.title}</p>
+								<div class="flex items-center justify-between gap-1 mt-1">
+									{#if listing.category}
+										<span class="text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full truncate">
+											{listing.category}
+										</span>
+									{/if}
+									{#if listing.price_range}
+										<span class="text-[10px] font-bold text-green-700 whitespace-nowrap">{listing.price_range}</span>
+									{/if}
+								</div>
+							</div>
+						</svelte:element>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
 		<!-- Mounted only while open, so the form re-seeds from the current profile
 		     each time rather than keeping the values it captured on first mount. -->
 		{#if isOwnProfile && isEditOpen}
 			<EditProfileModal bind:isOpen={isEditOpen} {profile} onSaved={reloadProfile} />
 		{/if}
+
+		<RequestModal
+			isOpen={!!requestListing}
+			listing={requestListing}
+			owner={profile}
+			onClose={() => (requestListing = null)}
+		/>
 	{/if}
 </div>

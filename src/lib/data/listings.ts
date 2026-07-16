@@ -98,6 +98,33 @@ function toListing(id: string, d: Record<string, unknown>): Listing {
 	return { id, ...(d as Omit<Listing, 'id'>) };
 }
 
+/** Firestore Timestamp -> epoch ms, tolerant of the shapes seen across the app. */
+function createdMs(ts: unknown): number {
+	const t = ts as { toMillis?: () => number; seconds?: number } | null | undefined;
+	if (!t) return 0;
+	if (typeof t.toMillis === 'function') return t.toMillis();
+	if (typeof t.seconds === 'number') return t.seconds * 1000;
+	return 0;
+}
+
+/**
+ * Everything this owner currently has up, newest first - what their public
+ * profile advertises.
+ *
+ * One equality filter only, so Firestore's automatic single-field index covers
+ * it. Adding `status`/`orderBy` to the query would demand a composite index on
+ * (owner_id, status, created_at) that doesn't exist, and the query would throw
+ * until that index finished building. At a few listings per user, filtering and
+ * sorting here is cheaper than that trade.
+ */
+export async function getListingsByOwner(ownerId: string): Promise<Listing[]> {
+	const snap = await getDocs(query(collection(db, 'listings'), where('owner_id', '==', ownerId)));
+	return snap.docs
+		.filter((d) => d.data().status === 'AVAILABLE')
+		.sort((a, b) => createdMs(b.data().created_at) - createdMs(a.data().created_at))
+		.map((d) => toListing(d.id, d.data()));
+}
+
 /** Map a listing doc into the { listing, owner } shape the feed/map components expect. */
 export function toFeedItem(listing: Listing): FeedItem {
 	return {

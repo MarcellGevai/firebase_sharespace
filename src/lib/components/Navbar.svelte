@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, Bell, MessageCircle, Menu, X, Map, LayoutList } from 'lucide-svelte';
+	import { Search, Bell, MessageCircle, Menu, X, Map, LayoutList, Clock } from 'lucide-svelte';
 	import type { User } from '$lib/types';
 	import { CATEGORIES } from '$lib/categories';
 	import NotificationDropdown from './NotificationDropdown.svelte';
@@ -48,6 +48,9 @@
 			</a>
 			{#if currentUser}
 				<NotificationDropdown />
+				<a href="/rentals" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" aria-label="Bérléseim">
+					<Clock class="w-5 h-5" />
+				</a>
 				<a href="/inbox" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
 					<MessageCircle class="w-5 h-5" />
 				</a>
@@ -115,6 +118,9 @@
 				</a>
 				<a href="/" class="p-1.5 text-gray-500 hover:text-blue-600 rounded-lg transition-colors" aria-label="Térkép">
 					<Map class="w-5 h-5" />
+				</a>
+				<a href="/rentals" class="p-1.5 text-gray-500 hover:text-blue-600 rounded-lg transition-colors" aria-label="Bérléseim">
+					<Clock class="w-5 h-5" />
 				</a>
 				<button onclick={handleLogout} class="text-xs text-red-600 font-semibold px-2 py-1">Logout</button>
 			</div>

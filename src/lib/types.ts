@@ -66,6 +66,10 @@ export type DealRequest = {
 	handover_status: HandoverStatus;
 	handover_initiated_at?: unknown;
 	return_initiated_at?: unknown;
+	// Set exactly when both parties confirm handover/return - the real rental
+	// window, as opposed to the originally requested start_date/end_date.
+	actual_rental_start?: unknown;
+	actual_rental_end?: unknown;
 	has_reviewed?: boolean;
 };
 

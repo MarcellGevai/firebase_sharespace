@@ -67,6 +67,17 @@ export async function getRequestForConversation(
 	return { id: match.id, ...(match.data() as Omit<DealRequest, 'id'>) };
 }
 
+/** Every deal (any status) the user is a party to, newest first. */
+export async function getMyRentals(uid: string): Promise<DealRequest[]> {
+	const q = query(
+		collection(db, 'requests'),
+		where('participants', 'array-contains', uid),
+		orderBy('created_at', 'desc')
+	);
+	const snap = await getDocs(q);
+	return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<DealRequest, 'id'>) }));
+}
+
 export type HandoverAction =
 	| 'accept_deal'
 	| 'reject_deal'
@@ -111,7 +122,10 @@ export async function handoverAction(requestId: string, action: HandoverAction):
 			});
 			return;
 		case 'accept_handover':
-			await updateDoc(ref, { handover_status: 'HANDOVER_COMPLETED' as HandoverStatus });
+			await updateDoc(ref, {
+				handover_status: 'HANDOVER_COMPLETED' as HandoverStatus,
+				actual_rental_start: serverTimestamp()
+			});
 			return;
 		case 'reset_handover':
 			await updateDoc(ref, { handover_status: 'PENDING' as HandoverStatus });
@@ -123,7 +137,10 @@ export async function handoverAction(requestId: string, action: HandoverAction):
 			});
 			return;
 		case 'accept_return':
-			await updateDoc(ref, { handover_status: 'RETURN_COMPLETED' as HandoverStatus });
+			await updateDoc(ref, {
+				handover_status: 'RETURN_COMPLETED' as HandoverStatus,
+				actual_rental_end: serverTimestamp()
+			});
 			return;
 		case 'reset_return':
 			await updateDoc(ref, { handover_status: 'HANDOVER_COMPLETED' as HandoverStatus });

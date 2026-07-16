@@ -83,6 +83,7 @@ service cloud.firestore {
 			return resource.data.handover_status == 'HANDOVER_INITIATED'
 				&& uid() == resource.data.requester_id
 				&& request.resource.data.handover_status == 'HANDOVER_COMPLETED'
+				&& request.resource.data.actual_rental_start == request.time
 				&& request.time < resource.data.handover_initiated_at + duration.value(5, 'm');
 		}
 		function resetHandover() {
@@ -105,6 +106,7 @@ service cloud.firestore {
 		function acceptReturn() {
 			return resource.data.handover_status == 'RETURN_INITIATED'
 				&& request.resource.data.handover_status == 'RETURN_COMPLETED'
+				&& request.resource.data.actual_rental_end == request.time
 				&& request.time < resource.data.return_initiated_at + duration.value(5, 'm');
 		}
 		function resetReturn() {

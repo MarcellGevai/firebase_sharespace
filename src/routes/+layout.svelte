@@ -35,17 +35,18 @@
 		{@render children()}
 	</main>
 
-	<!-- Floating Action Button -->
+	<!-- Floating Action Buttons -->
 	{#if currentUser}
-		<div class="fixed bottom-6 left-6 z-40 group/fab">
-			<!-- "Igény" mini-FAB: pops out above the main button when the FAB area is hovered/tapped. -->
+		<div class="fixed bottom-6 left-6 z-40 flex flex-col items-start gap-3">
+			<!-- "Igény" (request). Labels expand on hover; the buttons themselves are
+			     always tappable so touch devices, which never hover, can reach both. -->
 			<button
 				onclick={() => isRequestModalOpen = true}
-				class="group/red absolute bottom-[4.5rem] left-0 bg-red-600 hover:bg-red-700 text-white h-14 rounded-full flex items-center shadow-lg shadow-red-200 transition-all duration-300 overflow-hidden opacity-0 scale-50 rotate-180 -translate-y-2 pointer-events-none group-hover/fab:opacity-100 group-hover/fab:scale-100 group-hover/fab:rotate-0 group-hover/fab:translate-y-0 group-hover/fab:pointer-events-auto"
+				class="group/red bg-red-600 hover:bg-red-700 text-white h-14 rounded-full flex items-center shadow-lg shadow-red-200 transition-all duration-300 active:scale-95 overflow-hidden"
 				aria-label="Új Igény"
 			>
 				<div class="w-14 h-14 flex items-center justify-center flex-shrink-0">
-					<Plus class="w-7 h-7" />
+					<Plus class="w-7 h-7 group-hover/red:rotate-90 transition-transform duration-300" />
 				</div>
 				<div class="overflow-hidden transition-all duration-300 w-0 group-hover/red:w-20 flex items-center opacity-0 group-hover/red:opacity-100">
 					<span class="whitespace-nowrap font-bold pr-5">Igény</span>
@@ -54,11 +55,11 @@
 
 			<button
 				onclick={() => isModalOpen = true}
-				class="group/blue relative bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-full flex items-center shadow-lg shadow-blue-200 transition-all duration-300 active:scale-95 overflow-hidden"
+				class="group/blue bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-full flex items-center shadow-lg shadow-blue-200 transition-all duration-300 active:scale-95 overflow-hidden"
 				aria-label="Új Hirdetés"
 			>
 				<div class="w-14 h-14 flex items-center justify-center flex-shrink-0">
-					<Plus class="w-7 h-7 group-hover/fab:rotate-90 transition-transform duration-300" />
+					<Plus class="w-7 h-7 group-hover/blue:rotate-90 transition-transform duration-300" />
 				</div>
 				<div class="overflow-hidden transition-all duration-300 w-0 group-hover/blue:w-24 flex items-center opacity-0 group-hover/blue:opacity-100">
 					<span class="whitespace-nowrap font-bold pr-5">Hirdetés</span>

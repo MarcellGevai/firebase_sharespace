@@ -69,6 +69,7 @@ export async function getRequestForConversation(
 
 export type HandoverAction =
 	| 'accept_deal'
+	| 'reject_deal'
 	| 'init_handover'
 	| 'accept_handover'
 	| 'reset_handover'
@@ -93,6 +94,9 @@ export async function handoverAction(
 	switch (action) {
 		case 'accept_deal':
 			await updateDoc(ref, { status: 'ACCEPTED' });
+			return;
+		case 'reject_deal':
+			await updateDoc(ref, { status: 'REJECTED' });
 			return;
 		case 'init_handover':
 			await updateDoc(ref, {

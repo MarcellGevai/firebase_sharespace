@@ -66,6 +66,12 @@ service cloud.firestore {
 				&& uid() == resource.data.owner_id
 				&& request.resource.data.handover_status == resource.data.handover_status;
 		}
+		function rejectDeal() {
+			return resource.data.status == 'PENDING'
+				&& request.resource.data.status == 'REJECTED'
+				&& uid() == resource.data.owner_id
+				&& request.resource.data.handover_status == resource.data.handover_status;
+		}
 		function initHandover() {
 			return resource.data.status == 'ACCEPTED'
 				&& resource.data.handover_status == 'PENDING'
@@ -114,7 +120,7 @@ service cloud.firestore {
 				&& request.resource.data.listing_id == resource.data.listing_id
 				&& request.resource.data.participants == resource.data.participants
 				&& (
-					acceptDeal() || initHandover() || acceptHandover() || resetHandover()
+					acceptDeal() || rejectDeal() || initHandover() || acceptHandover() || resetHandover()
 					|| initReturn() || acceptReturn() || resetReturn() || closeDeal()
 				);
 			allow delete: if false;

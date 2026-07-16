@@ -12,7 +12,8 @@
 	let isRequester = $derived(request?.requester_id === currentUser.id);
 	let isPending = $derived(request?.status === 'PENDING');
 	let isAccepted = $derived(request?.status === 'ACCEPTED');
-	
+	let isRejected = $derived(request?.status === 'REJECTED');
+
 	let handoverStatus = $derived(request?.handover_status || 'PENDING');
 	
 	let isHandoverInitiated = $derived(handoverStatus === 'HANDOVER_INITIATED');
@@ -26,7 +27,13 @@
 	let needsReview = $derived((isReturnCompleted || isClosed) && !hasReviewed);
 
 	async function handleAction(
-		actionType: 'init_handover' | 'accept_handover' | 'init_return' | 'accept_return' | 'accept_deal',
+		actionType:
+			| 'init_handover'
+			| 'accept_handover'
+			| 'init_return'
+			| 'accept_return'
+			| 'accept_deal'
+			| 'reject_deal',
 		extra: { terms?: HandoverTerms } = {}
 	) {
 		actionInFlight = true;
@@ -78,9 +85,10 @@
 			</div>
 			<div class="text-right">
 				<span class="block text-lg font-bold text-blue-600">{request.price_offer} Ft</span>
-				<span class="text-xs font-semibold px-2 py-1 rounded-full 
-					{isClosed ? 'bg-gray-100 text-gray-600' : (isHandoverCompleted && !isReturnCompleted ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')}">
-					{#if isClosed}Lezárva
+				<span class="text-xs font-semibold px-2 py-1 rounded-full
+					{isRejected ? 'bg-red-100 text-red-700' : isClosed ? 'bg-gray-100 text-gray-600' : (isHandoverCompleted && !isReturnCompleted ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')}">
+					{#if isRejected}Elutasítva
+					{:else if isClosed}Lezárva
 					{:else if isReturnCompleted}Visszaadva, Értékelésre vár
 					{:else if isReturnInitiated}Visszaadás folyamatban...
 					{:else if isHandoverCompleted}Bérlés alatt (Zöld)
@@ -92,8 +100,13 @@
 		</div>
 
 		<div class="flex gap-2 justify-end mt-2">
-			{#if isPending}
+			{#if isRejected}
+				<span class="text-sm text-gray-500 italic">Az ajánlatot elutasították.</span>
+			{:else if isPending}
 				{#if !isRequester}
+					<button onclick={() => handleAction('reject_deal')} class="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
+						Visszautasít
+					</button>
 					<button onclick={() => handleAction('accept_deal')} class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">
 						Ajánlat Elfogadása
 					</button>

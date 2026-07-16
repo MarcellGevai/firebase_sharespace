@@ -53,6 +53,7 @@ export type DealRequest = {
 	listing_id: string;
 	owner_id: string;
 	requester_id: string;
+	participants: string[];
 	start_date: string;
 	end_date: string;
 	status: RequestStatus;

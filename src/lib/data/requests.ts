@@ -29,6 +29,7 @@ export type NewRequest = {
 export async function createRequest(data: NewRequest): Promise<string> {
 	const ref = await addDoc(collection(db, 'requests'), {
 		...data,
+		participants: [data.owner_id, data.requester_id],
 		status: 'PENDING',
 		handover_status: 'PENDING',
 		handover_initiated_at: null,
@@ -50,17 +51,20 @@ export async function getRequestForConversation(
 	userA: string,
 	userB: string
 ): Promise<DealRequest | null> {
+	// Filtering on `participants` (rather than requester_id) is what lets the
+	// security rules engine prove `isParty()` for this list query; userB is then
+	// matched client-side since Firestore only allows one array-contains per query.
 	const q = query(
 		collection(db, 'requests'),
 		where('listing_id', '==', listingId),
-		where('requester_id', 'in', [userA, userB]),
+		where('participants', 'array-contains', userA),
 		orderBy('created_at', 'desc'),
-		limit(1)
+		limit(20)
 	);
 	const snap = await getDocs(q);
-	if (snap.empty) return null;
-	const d = snap.docs[0];
-	return { id: d.id, ...(d.data() as Omit<DealRequest, 'id'>) };
+	const match = snap.docs.find((d) => (d.data().participants ?? []).includes(userB));
+	if (!match) return null;
+	return { id: match.id, ...(match.data() as Omit<DealRequest, 'id'>) };
 }
 
 export type HandoverAction =

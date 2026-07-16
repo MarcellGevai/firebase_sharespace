@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { X, Package, Wrench, Briefcase, Tag, Info } from 'lucide-svelte';
+	import { X, Package, Wrench, Briefcase, Tag, Info, LocateFixed, Home, MapPin, Loader2 } from 'lucide-svelte';
 	import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 	import { v4 as uuidv4 } from 'uuid';
 	import { storage } from '$lib/firebase';
-	import { geocodeAddress } from '$lib/geocode';
+	import { geocodeAddress, searchAddress, reverseGeocode, type AddressSuggestion } from '$lib/geocode';
 	import { createListing } from '$lib/data/listings';
 
 	let { isOpen = $bindable(false), onSuccess, currentUser }: { isOpen: boolean; onSuccess?: () => void; currentUser?: any } = $props();
@@ -15,14 +15,102 @@
 	let description = $state('');
 	let isSubmitting = $state(false);
 	let errorMsg = $state('');
-	let location_address = $state('');
 	let imageFile = $state<File | null>(null);
+
+	// Location: three ways to set where the listing appears on the map.
+	let locationMode = $state<'current' | 'home' | 'custom'>('home');
+	let location_address = $state('');
+	let location_lat = $state<number | null>(null);
+	let location_lon = $state<number | null>(null);
+	let locationLoading = $state(false);
+	let locationError = $state('');
+	let addressSuggestions = $state<AddressSuggestion[]>([]);
+	let showSuggestions = $state(false);
+	let suggestionsLoading = $state(false);
+	let searchDebounce: ReturnType<typeof setTimeout> | undefined;
 
 	$effect(() => {
 		if (isOpen && currentUser && !location_address) {
-			location_address = currentUser.address || '';
+			if (currentUser.address) {
+				locationMode = 'home';
+				location_address = currentUser.address;
+				location_lat = currentUser.latitude ?? null;
+				location_lon = currentUser.longitude ?? null;
+			} else {
+				locationMode = 'custom';
+			}
 		}
 	});
+
+	function selectHome() {
+		locationMode = 'home';
+		showSuggestions = false;
+		locationError = '';
+		location_address = currentUser?.address || '';
+		location_lat = currentUser?.latitude ?? null;
+		location_lon = currentUser?.longitude ?? null;
+	}
+
+	function selectCustom() {
+		locationMode = 'custom';
+		showSuggestions = false;
+		locationError = '';
+	}
+
+	function useCurrentLocation() {
+		locationMode = 'current';
+		showSuggestions = false;
+		locationError = '';
+
+		if (!navigator.geolocation) {
+			locationError = 'A böngésző nem támogatja a helymeghatározást.';
+			return;
+		}
+
+		locationLoading = true;
+		navigator.geolocation.getCurrentPosition(
+			async (pos) => {
+				location_lat = pos.coords.latitude;
+				location_lon = pos.coords.longitude;
+				const address = await reverseGeocode(location_lat, location_lon);
+				location_address = address || `${location_lat.toFixed(5)}, ${location_lon.toFixed(5)}`;
+				locationLoading = false;
+			},
+			() => {
+				locationError = 'Nem sikerült lekérni a jelenlegi helyzetet.';
+				locationLoading = false;
+			},
+			{ timeout: 10000 }
+		);
+	}
+
+	function handleLocationInput() {
+		location_lat = null;
+		location_lon = null;
+		if (searchDebounce) clearTimeout(searchDebounce);
+
+		const q = location_address;
+		if (q.trim().length < 3) {
+			addressSuggestions = [];
+			showSuggestions = false;
+			return;
+		}
+
+		searchDebounce = setTimeout(async () => {
+			suggestionsLoading = true;
+			addressSuggestions = await searchAddress(q);
+			showSuggestions = addressSuggestions.length > 0;
+			suggestionsLoading = false;
+		}, 400);
+	}
+
+	function pickSuggestion(s: AddressSuggestion) {
+		location_address = s.display_name;
+		location_lat = s.lat;
+		location_lon = s.lon;
+		addressSuggestions = [];
+		showSuggestions = false;
+	}
 
 	function handleImageChange(e: Event) {
 		const target = e.target as HTMLInputElement;
@@ -70,8 +158,16 @@
 				if (type === 'SERVICE') image_url = 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=600&q=80';
 			}
 
-			// 3. Geocode the address so the listing can appear on the map (best-effort).
-			const coords = location_address ? await geocodeAddress(location_address).catch(() => null) : null;
+			// 3. Resolve coordinates so the listing can appear on the map: reuse the
+			// coordinates already picked (current location / home / chosen suggestion),
+			// falling back to a best-effort geocode if the user typed a custom address
+			// without selecting a suggestion.
+			let coords: { lat: number; lon: number } | null = null;
+			if (location_lat != null && location_lon != null) {
+				coords = { lat: location_lat, lon: location_lon };
+			} else if (location_address) {
+				coords = await geocodeAddress(location_address).catch(() => null);
+			}
 
 			// 4. Create the Firestore document.
 			await createListing(currentUser, {
@@ -94,6 +190,9 @@
 			priceRange = '';
 			description = '';
 			location_address = '';
+			location_lat = null;
+			location_lon = null;
+			locationMode = currentUser?.address ? 'home' : 'custom';
 			imageFile = null;
 			type = 'ITEM';
 			
@@ -210,8 +309,84 @@
 					</div>
 
 					<div class="space-y-1.5">
-						<label for="location" class="block text-sm font-semibold text-gray-700">Helyszín</label>
-						<input type="text" id="location" bind:value={location_address} class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="Pl. Budapest, XI. kerület" required />
+						<label class="block text-sm font-semibold text-gray-700">Helyszín</label>
+
+						<div class="grid grid-cols-3 gap-2">
+							<button
+								type="button"
+								onclick={useCurrentLocation}
+								class={`px-2 py-2 rounded-xl border-2 flex items-center justify-center gap-1.5 text-xs font-semibold transition-all ${locationMode === 'current' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}
+							>
+								<LocateFixed class="w-3.5 h-3.5" />
+								Jelenlegi hely
+							</button>
+							<button
+								type="button"
+								onclick={selectHome}
+								disabled={!currentUser?.address}
+								class={`px-2 py-2 rounded-xl border-2 flex items-center justify-center gap-1.5 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${locationMode === 'home' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}
+							>
+								<Home class="w-3.5 h-3.5" />
+								Otthon
+							</button>
+							<button
+								type="button"
+								onclick={selectCustom}
+								class={`px-2 py-2 rounded-xl border-2 flex items-center justify-center gap-1.5 text-xs font-semibold transition-all ${locationMode === 'custom' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}
+							>
+								<MapPin class="w-3.5 h-3.5" />
+								Egyéni cím
+							</button>
+						</div>
+
+						{#if locationMode === 'custom'}
+							<div class="relative">
+								<input
+									type="text"
+									id="location"
+									bind:value={location_address}
+									oninput={handleLocationInput}
+									onfocus={() => (showSuggestions = addressSuggestions.length > 0)}
+									onblur={() => setTimeout(() => (showSuggestions = false), 150)}
+									autocomplete="off"
+									class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+									placeholder="Kezdj el gépelni, pl. Batthyány tér..."
+									required
+								/>
+								{#if suggestionsLoading}
+									<Loader2 class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+								{/if}
+								{#if showSuggestions && addressSuggestions.length > 0}
+									<ul class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+										{#each addressSuggestions as s}
+											<li>
+												<button
+													type="button"
+													onmousedown={() => pickSuggestion(s)}
+													class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+												>
+													{s.display_name}
+												</button>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+						{:else}
+							<div class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm flex items-center gap-2 min-h-[42px]">
+								{#if locationLoading}
+									<Loader2 class="w-4 h-4 text-gray-400 animate-spin flex-shrink-0" />
+									<span class="text-gray-400">Helyzet lekérése...</span>
+								{:else}
+									<MapPin class="w-4 h-4 text-gray-400 flex-shrink-0" />
+									<span>{location_address || 'Nincs megadva'}</span>
+								{/if}
+							</div>
+						{/if}
+
+						{#if locationError}
+							<p class="text-xs text-red-600">{locationError}</p>
+						{/if}
 					</div>
 
 					<!-- Description -->

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, mount, unmount } from 'svelte';
 	import maplibregl from 'maplibre-gl';
+	import Supercluster from 'supercluster';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import {
 		LocateFixed,
@@ -48,9 +49,14 @@
 
 	const DEFAULT_COLOR = '#64748b';
 
+	// Cluster radius in px; past CLUSTER_MAX_ZOOM every pin stands on its own.
+	const CLUSTER_RADIUS = 60;
+	const CLUSTER_MAX_ZOOM = 16;
+
 	let mapContainer: HTMLDivElement;
 	let map: maplibregl.Map;
 	let selfMarker: maplibregl.Marker | null = null;
+	let clusterIndex: Supercluster<{ groupIndex: number }> | null = null;
 	let listingMarkers: { marker: maplibregl.Marker; iconInstance: Record<string, any> | null }[] = [];
 	let watchId: number | null = null;
 	let hasCenteredOnSelf = false;
@@ -165,18 +171,80 @@
 		return { el, iconInstance };
 	}
 
-	function renderListingMarkers() {
+	/** A merged pin: circle with the number of groups hidden inside it. */
+	function createClusterElement(count: number, onExpand: () => void) {
+		const el = document.createElement('button');
+		el.type = 'button';
+		el.className = 'cluster-marker';
+		// Grow the circle with the count so dense areas read as heavier.
+		const size = count < 10 ? 38 : count < 50 ? 46 : 54;
+		el.style.width = `${size}px`;
+		el.style.height = `${size}px`;
+		el.style.fontSize = count < 100 ? '13px' : '11px';
+		el.textContent = String(count);
+		el.setAttribute('aria-label', `${count} hirdető ezen a területen, nagyításhoz kattints`);
+		el.addEventListener('click', onExpand);
+		return el;
+	}
+
+	function buildClusterIndex() {
+		const index = new Supercluster<{ groupIndex: number }>({
+			radius: CLUSTER_RADIUS,
+			maxZoom: CLUSTER_MAX_ZOOM
+		});
+		index.load(
+			groups.map((group, groupIndex) => ({
+				type: 'Feature' as const,
+				properties: { groupIndex },
+				geometry: {
+					type: 'Point' as const,
+					coordinates: [group[0].position.lon, group[0].position.lat]
+				}
+			}))
+		);
+		clusterIndex = index;
+	}
+
+	function clearListingMarkers() {
 		for (const { marker, iconInstance } of listingMarkers) {
 			if (iconInstance) unmount(iconInstance);
 			marker.remove();
 		}
 		listingMarkers = [];
+	}
 
-		for (const group of groups) {
-			const { lat, lon } = group[0].position;
-			const { el, iconInstance } = createMarkerElement(group);
-			const marker = new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(map);
-			listingMarkers.push({ marker, iconInstance });
+	function renderListingMarkers() {
+		if (!map || !clusterIndex) return;
+		clearListingMarkers();
+
+		const bounds = map.getBounds();
+		const bbox: [number, number, number, number] = [
+			bounds.getWest(),
+			bounds.getSouth(),
+			bounds.getEast(),
+			bounds.getNorth()
+		];
+
+		for (const feature of clusterIndex.getClusters(bbox, Math.round(map.getZoom()))) {
+			const [lon, lat] = feature.geometry.coordinates;
+			const props = feature.properties as { cluster?: boolean; cluster_id?: number; point_count?: number; groupIndex?: number };
+
+			if (props.cluster) {
+				const clusterId = props.cluster_id!;
+				const el = createClusterElement(props.point_count!, () => {
+					// Zoom to exactly where supercluster says this cluster breaks apart.
+					const target = clusterIndex!.getClusterExpansionZoom(clusterId);
+					map.easeTo({ center: [lon, lat], zoom: target, duration: 500 });
+				});
+				const marker = new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(map);
+				listingMarkers.push({ marker, iconInstance: null });
+			} else {
+				const group = groups[props.groupIndex!];
+				if (!group) continue;
+				const { el, iconInstance } = createMarkerElement(group);
+				const marker = new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(map);
+				listingMarkers.push({ marker, iconInstance });
+			}
 		}
 	}
 
@@ -203,9 +271,11 @@
 		}
 	}
 
-	// Re-render markers whenever the map finishes loading or the visible
-	// group set changes (e.g. once filtering is added).
+	// Rebuild the cluster index and repaint whenever the map finishes loading or
+	// the visible group set changes (category filter, search). Reading `groups`
+	// via buildClusterIndex is what makes this effect track those filters.
 	$effect(() => {
+		buildClusterIndex();
 		if (mapLoaded) {
 			renderListingMarkers();
 		}
@@ -223,6 +293,9 @@
 		map.on('load', () => {
 			mapLoaded = true;
 		});
+		// Clusters depend on the viewport, so they have to be recomputed after every
+		// pan/zoom. moveend covers zoom too, and fires once the gesture settles.
+		map.on('moveend', renderListingMarkers);
 		// MapLibre's internal ResizeObserver discards its first callback (assumes
 		// the constructor's synchronous measurement was already correct), so a
 		// container that settles into its final full-bleed size only after mount
@@ -387,7 +460,8 @@
 		background: #3b82f6;
 		border: 3px solid white;
 		box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
-		position: relative;
+		/* Absolute for the same reason as .listing-marker above. */
+		position: absolute;
 	}
 
 	:global(.self-location-marker::after) {
@@ -421,8 +495,46 @@
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		position: relative;
+		/* Must stay absolute: MapLibre positions markers with a transform that
+		   assumes the element is taken out of flow at the container origin. This
+		   rule and .maplibregl-marker have equal specificity and ours is injected
+		   last, so `relative` here silently won and offset every pin by its flow
+		   position - which read as pins drifting on zoom. Absolute still gives the
+		   count badge the containing block it needs. */
+		position: absolute;
 		padding: 0;
+	}
+
+	:global(.cluster-marker) {
+		/* Absolute for the same reason as .listing-marker above. */
+		position: absolute;
+		border-radius: 50%;
+		background: #2563eb;
+		color: white;
+		font-family: inherit;
+		font-weight: 700;
+		line-height: 1;
+		border: 3px solid white;
+		/* Drop shadow plus the soft outer halo that reads as "more underneath". */
+		box-shadow:
+			0 2px 8px rgba(0, 0, 0, 0.3),
+			0 0 0 6px rgba(37, 99, 235, 0.18);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		padding: 0;
+		/* Never transition or set `transform` here: MapLibre rewrites the inline
+		   transform every frame to keep the marker on its coordinate, so a
+		   transition would make it lag the map while panning. Hover uses
+		   box-shadow, which MapLibre doesn't touch. */
+		transition: box-shadow 0.15s ease-out;
+	}
+
+	:global(.cluster-marker:hover) {
+		box-shadow:
+			0 3px 10px rgba(0, 0, 0, 0.35),
+			0 0 0 9px rgba(37, 99, 235, 0.28);
 	}
 
 	:global(.listing-marker-badge) {

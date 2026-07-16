@@ -28,9 +28,14 @@
 	let showSuggestions = $state(false);
 	let suggestionsLoading = $state(false);
 	let searchDebounce: ReturnType<typeof setTimeout> | undefined;
+	// Tracks whether the one-time "default to home address" step has already run
+	// for this open of the modal - independent of location_address's current
+	// value, so clearing the custom address field never re-triggers it.
+	let locationInitialized = $state(false);
 
 	$effect(() => {
-		if (isOpen && currentUser && !location_address) {
+		if (isOpen && currentUser && !locationInitialized) {
+			locationInitialized = true;
 			if (currentUser.address) {
 				locationMode = 'home';
 				location_address = currentUser.address;
@@ -53,6 +58,10 @@
 
 	function selectCustom() {
 		locationMode = 'custom';
+		location_address = '';
+		location_lat = null;
+		location_lon = null;
+		addressSuggestions = [];
 		showSuggestions = false;
 		locationError = '';
 	}
@@ -193,6 +202,7 @@
 			location_lat = null;
 			location_lon = null;
 			locationMode = currentUser?.address ? 'home' : 'custom';
+			locationInitialized = false;
 			imageFile = null;
 			type = 'ITEM';
 			
@@ -207,6 +217,7 @@
 
 	function closeModal() {
 		isOpen = false;
+		locationInitialized = false;
 	}
 </script>
 

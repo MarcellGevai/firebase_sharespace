@@ -55,6 +55,15 @@ service cloud.firestore {
 			allow update, delete: if signedIn() && resource.data.owner_id == uid();
 		}
 
+		// ---- WANTS (Igények) ----
+		// Someone posting that they're looking for an item/service - public
+		// marketplace, same posture as /listings.
+		match /wants/{id} {
+			allow read: if true;
+			allow create: if signedIn() && request.resource.data.requester_id == uid();
+			allow update, delete: if signedIn() && resource.data.requester_id == uid();
+		}
+
 		// ---- REQUESTS (deals + handover state machine) ----
 		function isParty() {
 			return uid() in resource.data.participants;

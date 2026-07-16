@@ -44,6 +44,23 @@ export type Listing = {
 	owner_trust_score?: number;
 };
 
+// A "want" (Igény): someone posting that they're looking for an item/service,
+// the inverse of a Listing. Lives in its own /wants collection - kept entirely
+// separate from /requests, which is the unrelated deal/handover state machine.
+export type Want = {
+	id: string;
+	requester_id: string;
+	title: string;
+	description: string;
+	category?: string;
+	date_from: string;
+	date_to: string;
+	price_min: number;
+	price_max: number;
+	requester_name?: string;
+	requester_avatar_url?: string;
+};
+
 export type RequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
 export type HandoverStatus =
 	| 'PENDING'

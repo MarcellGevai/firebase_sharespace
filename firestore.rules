@@ -78,25 +78,38 @@ service cloud.firestore {
 		function otherParty() {
 			return uid() == resource.data.owner_id ? resource.data.requester_id : resource.data.owner_id;
 		}
+		// The terms under negotiation. Any change to these has to go back through
+		// the other party, so every transition below either freezes them or hands
+		// the turn over - never both-at-once.
+		function termFields() {
+			return ['start_date', 'end_date', 'price_offer'];
+		}
 		// Each helper describes exactly one legal transition of the state machine.
+		// The affectedKeys() allowlists matter as much as the status checks: without
+		// them "accept" could quietly carry a price edit along with it, which would
+		// defeat the whole point of requiring acceptance.
 		function acceptDeal() {
 			return resource.data.status == 'PENDING'
 				&& request.resource.data.status == 'ACCEPTED'
 				&& isAwaited()
-				&& request.resource.data.handover_status == resource.data.handover_status;
+				&& request.resource.data.handover_status == resource.data.handover_status
+				&& request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
 		}
 		function rejectDeal() {
 			return resource.data.status == 'PENDING'
 				&& request.resource.data.status == 'REJECTED'
 				&& isAwaited()
-				&& request.resource.data.handover_status == resource.data.handover_status;
+				&& request.resource.data.handover_status == resource.data.handover_status
+				&& request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
 		}
 		function modifyOffer() {
 			return resource.data.status == 'PENDING'
 				&& request.resource.data.status == 'PENDING'
 				&& isAwaited()
 				&& request.resource.data.awaiting_response_from == otherParty()
-				&& request.resource.data.handover_status == resource.data.handover_status;
+				&& request.resource.data.handover_status == resource.data.handover_status
+				&& request.resource.data.diff(resource.data).affectedKeys()
+					.hasOnly(termFields().concat(['status', 'awaiting_response_from']));
 		}
 		function initHandover() {
 			return resource.data.status == 'ACCEPTED'
@@ -116,13 +129,23 @@ service cloud.firestore {
 			return resource.data.handover_status == 'HANDOVER_INITIATED'
 				&& request.resource.data.handover_status == 'PENDING';
 		}
-		// Either party may tweak the agreed dates/price, but only before the
-		// handover handshake actually starts.
-		function updateTerms() {
+		// Revising an already-accepted deal drops it back into the ping-pong rather
+		// than applying silently: status returns to PENDING and the other party owns
+		// the next move, so nobody is bound by terms they never saw. Because
+		// initHandover() requires status == 'ACCEPTED', this also makes the 5-minute
+		// handover window unreachable until the revision is accepted.
+		//
+		// Deliberately no isAwaited() check: after acceptance awaiting_response_from
+		// still points at whoever accepted, so requiring it would let only one of the
+		// two parties revise. Either may - they just can't do it unilaterally.
+		function reviseAcceptedDeal() {
 			return resource.data.status == 'ACCEPTED'
 				&& resource.data.handover_status == 'PENDING'
-				&& request.resource.data.status == resource.data.status
-				&& request.resource.data.handover_status == resource.data.handover_status;
+				&& request.resource.data.status == 'PENDING'
+				&& request.resource.data.awaiting_response_from == otherParty()
+				&& request.resource.data.handover_status == resource.data.handover_status
+				&& request.resource.data.diff(resource.data).affectedKeys()
+					.hasOnly(termFields().concat(['status', 'awaiting_response_from']));
 		}
 		function initReturn() {
 			return resource.data.handover_status == 'HANDOVER_COMPLETED'
@@ -159,9 +182,9 @@ service cloud.firestore {
 				&& request.resource.data.listing_id == resource.data.listing_id
 				&& request.resource.data.participants == resource.data.participants
 				&& (
-					acceptDeal() || rejectDeal() || modifyOffer() || initHandover() || acceptHandover()
-					|| resetHandover() || updateTerms() || initReturn() || acceptReturn() || resetReturn()
-					|| closeDeal()
+					acceptDeal() || rejectDeal() || modifyOffer() || reviseAcceptedDeal()
+					|| initHandover() || acceptHandover() || resetHandover() || initReturn()
+					|| acceptReturn() || resetReturn() || closeDeal()
 				);
 			allow delete: if false;
 		}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Handshake, Undo2, Check, Star, Pencil } from 'lucide-svelte';
 	import HandoverModal from './HandoverModal.svelte';
-	import { handoverAction, updateDealTerms, modifyOffer } from '$lib/data/requests';
+	import { handoverAction, reviseAcceptedDeal, modifyOffer } from '$lib/data/requests';
 
 	let { request, currentUser, otherUser }: { request: any, currentUser: any, otherUser: any } = $props();
 
@@ -112,8 +112,11 @@
 		}
 		editSubmitting = true;
 		editError = '';
+		// Revising sends the deal back to PENDING for the other party to accept,
+		// so the turn passes to whoever isn't making the change.
+		const nextResponder = isRequester ? request.owner_id : request.requester_id;
 		try {
-			await updateDealTerms(request.id, {
+			await reviseAcceptedDeal(request.id, nextResponder, {
 				start_date: editStartDate,
 				end_date: editEndDate,
 				price_offer: editPrice
@@ -260,6 +263,10 @@
 
 		{#if showEditTerms}
 			<div class="border-t border-gray-100 pt-3 space-y-3">
+				<p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 flex items-start gap-1.5">
+					<Pencil class="w-3.5 h-3.5 mt-0.5 shrink-0" />
+					<span>A módosítást a másik félnek újra el kell fogadnia, és az átadás csak ezután indítható.</span>
+				</p>
 				<div class="grid grid-cols-2 gap-3">
 					<div class="space-y-1">
 						<label for="edit_start" class="block text-xs font-semibold text-gray-700">Kezdő dátum</label>

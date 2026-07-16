@@ -125,13 +125,25 @@ export type HandoverAction =
 
 export type HandoverTerms = { start_date: string; end_date: string; price_offer: number };
 
-/** Edit the agreed dates/price. Only allowed before the handover handshake starts. */
-export async function updateDealTerms(requestId: string, terms: HandoverTerms): Promise<void> {
+/**
+ * Revise an already-accepted deal's dates/price. This is NOT a silent edit: the
+ * deal drops back to PENDING and `nextResponder` must accept the new terms
+ * before anything (including the handover handshake) can proceed - initHandover
+ * requires status ACCEPTED. Only allowed before the handshake starts; the
+ * matching `reviseAcceptedDeal()` security rule enforces all of this server-side.
+ */
+export async function reviseAcceptedDeal(
+	requestId: string,
+	nextResponder: string,
+	terms: HandoverTerms
+): Promise<void> {
 	const ref = doc(db, 'requests', requestId);
 	await updateDoc(ref, {
 		start_date: terms.start_date,
 		end_date: terms.end_date,
-		price_offer: terms.price_offer
+		price_offer: terms.price_offer,
+		status: 'PENDING',
+		awaiting_response_from: nextResponder
 	});
 }
 

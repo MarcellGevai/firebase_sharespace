@@ -27,32 +27,61 @@
 	let searchQuery = $state('');
 	let showResults = $state(false);
 	let searching = $state(false);
+	let isSearchFocused = $state(false);
 	let userResults = $state<UserSearchResult[]>([]);
 	let listingResults = $state<Listing[]>([]);
 	let allListingsCache: Listing[] | null = null;
 	let searchDebounce: ReturnType<typeof setTimeout> | undefined;
+	// Guards against a slow earlier request overwriting a newer query's results.
+	let searchSeq = 0;
+
+	async function runSearch(q: string, seq: number) {
+		searching = true;
+		showResults = true;
+
+		// Listings and users are fetched independently so one failing can't discard
+		// the other's hits or leave the dropdown stuck on the "searching" state.
+		let listings: Listing[] = [];
+		try {
+			if (!allListingsCache) allListingsCache = await getAvailableListings();
+			const qLower = q.toLowerCase();
+			listings = allListingsCache.filter((l) => l.title.toLowerCase().includes(qLower)).slice(0, 5);
+		} catch {
+			listings = [];
+		}
+
+		// /users is readable only to signed-in visitors (the docs carry email and
+		// address), so for a signed-out one the query would always be denied - skip
+		// it and tell them why rather than showing a misleading "no results".
+		let users: UserSearchResult[] = [];
+		if (currentUser) {
+			try {
+				users = await searchUsers(q);
+			} catch {
+				users = [];
+			}
+		}
+
+		if (seq !== searchSeq) return;
+		listingResults = listings;
+		userResults = users;
+		searching = false;
+	}
 
 	function handleSearchInput(value: string) {
 		searchQuery = value;
 		if (searchDebounce) clearTimeout(searchDebounce);
 		const q = value.trim();
+		searchSeq++;
 		if (q.length < 2) {
 			userResults = [];
 			listingResults = [];
+			searching = false;
 			showResults = false;
 			return;
 		}
-		searchDebounce = setTimeout(async () => {
-			searching = true;
-			showResults = true;
-			if (!allListingsCache) {
-				allListingsCache = await getAvailableListings();
-			}
-			const qLower = q.toLowerCase();
-			listingResults = allListingsCache.filter((l) => l.title.toLowerCase().includes(qLower)).slice(0, 5);
-			userResults = await searchUsers(q);
-			searching = false;
-		}, 300);
+		const seq = searchSeq;
+		searchDebounce = setTimeout(() => runSearch(q, seq), 300);
 	}
 
 	function goToProfile(id: string) {
@@ -78,21 +107,28 @@
 			<span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hidden sm:block">Sharespace</span>
 		</a>
 
-		<!-- Search Bar -->
-		<div class="flex-1 max-w-xs mx-4 relative">
-			<div class="relative group">
-				<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-				<input
-					type="text"
-					value={searchQuery}
-					oninput={(e) => handleSearchInput((e.target as HTMLInputElement).value)}
-					onfocus={() => { if (searchQuery.trim().length >= 2) showResults = true; }}
-					onblur={() => setTimeout(() => (showResults = false), 150)}
-					autocomplete="off"
-					placeholder="Search items & services..."
-					class="w-full bg-gray-100 hover:bg-gray-200 focus:bg-white border border-transparent focus:border-blue-500 rounded-full py-2 pl-10 pr-4 text-sm outline-none transition-all duration-200"
-				/>
-			</div>
+		<!-- Search Bar. The outer div only reserves the navbar slot; the inner one is
+		     absolutely positioned so focusing can widen it out over the action icons
+		     without reflowing the logo or the rest of the bar. -->
+		<div class="relative mx-4 h-10 flex-1 max-w-xs md:flex-none md:w-40">
+			<div
+				class={`absolute left-0 top-1/2 -translate-y-1/2 transition-[width] duration-300 ease-out ${
+					isSearchFocused ? 'z-50 w-full md:w-[26rem]' : 'z-10 w-full'
+				}`}
+			>
+				<div class="relative group">
+					<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+					<input
+						type="text"
+						value={searchQuery}
+						oninput={(e) => handleSearchInput((e.target as HTMLInputElement).value)}
+						onfocus={() => { isSearchFocused = true; if (searchQuery.trim().length >= 2) showResults = true; }}
+						onblur={() => setTimeout(() => { showResults = false; isSearchFocused = false; }, 150)}
+						autocomplete="off"
+						placeholder="Search items & services..."
+						class="w-full bg-gray-100 hover:bg-gray-200 focus:bg-white focus:shadow-lg border border-transparent focus:border-blue-500 rounded-full py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors duration-200"
+					/>
+				</div>
 
 			{#if showResults}
 				<div class="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 max-h-96 overflow-y-auto">
@@ -100,6 +136,11 @@
 						<div class="p-4 text-sm text-gray-400 text-center">Keresés...</div>
 					{:else if userResults.length === 0 && listingResults.length === 0}
 						<div class="p-4 text-sm text-gray-400 text-center">Nincs találat.</div>
+						{#if !currentUser}
+							<div class="px-3 py-2.5 text-xs text-gray-500 bg-gray-50 border-t border-gray-100 text-center">
+								<a href="/login" class="text-blue-600 font-semibold hover:underline">Jelentkezz be</a> a profilok kereséséhez.
+							</div>
+						{/if}
 					{:else}
 						{#if userResults.length > 0}
 							<div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50">Felhasználók</div>
@@ -130,6 +171,7 @@
 					{/if}
 				</div>
 			{/if}
+			</div>
 		</div>
 
 		<div class="flex items-center gap-2">

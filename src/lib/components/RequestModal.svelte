@@ -27,6 +27,12 @@
 	let isSubmitting = $state(false);
 	let errorMsg = $state('');
 
+	// If the owner declared a fixed availability window, the requester's dates
+	// must fall inside it; an ongoing/unset window leaves date pickers open.
+	let isFixedAvailability = $derived(listing?.availability_type === 'FIXED');
+	let availabilityMin = $derived(isFixedAvailability ? listing.available_from : undefined);
+	let availabilityMax = $derived(isFixedAvailability ? listing.available_until : undefined);
+
 	$effect(() => {
 		if (isOpen && recommendedPrice === 0) {
 			recommendedPrice = Math.floor(Math.random() * 5000) + 1000;
@@ -50,6 +56,16 @@
 		if (new Date(startDate) > new Date(endDate)) {
 			errorMsg = 'A kezdő dátum nem lehet a vég dátum után.';
 			return;
+		}
+		if (isFixedAvailability) {
+			if (availabilityMin && startDate < availabilityMin) {
+				errorMsg = `A hirdetés csak ${availabilityMin}-től érhető el.`;
+				return;
+			}
+			if (availabilityMax && endDate > availabilityMax) {
+				errorMsg = `A hirdetés csak ${availabilityMax}-ig érhető el.`;
+				return;
+			}
 		}
 		if (!priceOffer) {
 			errorMsg = 'Kérlek adj meg egy ajánlott árat.';
@@ -135,23 +151,33 @@
 					</div>
 				</div>
 
+				{#if isFixedAvailability}
+					<p class="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+						Ez a hirdetés csak {availabilityMin} és {availabilityMax} között érhető el.
+					</p>
+				{/if}
+
 				<!-- Form -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1.5">
 						<label for="start_date" class="block text-sm font-semibold text-gray-700">Start Date</label>
-						<input 
-							type="date" 
-							id="start_date" 
+						<input
+							type="date"
+							id="start_date"
 							bind:value={startDate}
+							min={availabilityMin}
+							max={availabilityMax}
 							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
 						/>
 					</div>
 					<div class="space-y-1.5">
 						<label for="end_date" class="block text-sm font-semibold text-gray-700">End Date</label>
-						<input 
-							type="date" 
-							id="end_date" 
+						<input
+							type="date"
+							id="end_date"
 							bind:value={endDate}
+							min={availabilityMin}
+							max={availabilityMax}
 							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
 						/>
 					</div>

@@ -121,6 +121,17 @@
 		showSuggestions = false;
 	}
 
+	// Owner-declared availability window (optional). Unset = always available,
+	// today's default behavior.
+	let availabilityEnabled = $state(false);
+	let availabilityType = $state<'ONGOING' | 'FIXED'>('ONGOING');
+	let availableFrom = $state('');
+	let availableUntil = $state('');
+
+	function todayDateInput(): string {
+		return new Date().toISOString().slice(0, 10);
+	}
+
 	function handleImageChange(e: Event) {
 		const target = e.target as HTMLInputElement;
 		if (target.files && target.files.length > 0) {
@@ -136,6 +147,17 @@
 		if (!title || !category || !priceRange) {
 			errorMsg = 'Kérjük, tölts ki minden kötelező mezőt!';
 			return;
+		}
+
+		if (availabilityEnabled && availabilityType === 'FIXED') {
+			if (!availableFrom || !availableUntil) {
+				errorMsg = 'Kérjük, add meg az elérhetőségi időszak mindkét dátumát!';
+				return;
+			}
+			if (new Date(availableFrom) > new Date(availableUntil)) {
+				errorMsg = 'Az "ettől" dátum nem lehet az "eddig" dátum után.';
+				return;
+			}
 		}
 
 		if (!currentUser) {
@@ -188,7 +210,14 @@
 				price_range: priceRange,
 				location_address,
 				latitude: coords?.lat ?? null,
-				longitude: coords?.lon ?? null
+				longitude: coords?.lon ?? null,
+				availability_type: availabilityEnabled ? availabilityType : null,
+				available_from: availabilityEnabled
+					? availabilityType === 'ONGOING'
+						? todayDateInput()
+						: availableFrom
+					: null,
+				available_until: availabilityEnabled && availabilityType === 'FIXED' ? availableUntil : null
 			});
 
 			// Success
@@ -203,6 +232,10 @@
 			location_lon = null;
 			locationMode = currentUser?.address ? 'home' : 'custom';
 			locationInitialized = false;
+			availabilityEnabled = false;
+			availabilityType = 'ONGOING';
+			availableFrom = '';
+			availableUntil = '';
 			imageFile = null;
 			type = 'ITEM';
 			
@@ -397,6 +430,63 @@
 
 						{#if locationError}
 							<p class="text-xs text-red-600">{locationError}</p>
+						{/if}
+					</div>
+
+					<!-- Availability window -->
+					<div class="space-y-1.5">
+						<label class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+							<input
+								type="checkbox"
+								bind:checked={availabilityEnabled}
+								class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+							/>
+							Elérhetőségi időszak megadása
+							<span class="text-gray-400 font-normal">Opcionális</span>
+						</label>
+
+						{#if availabilityEnabled}
+							<div class="grid grid-cols-2 gap-2">
+								<button
+									type="button"
+									onclick={() => (availabilityType = 'ONGOING')}
+									class={`px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${availabilityType === 'ONGOING' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}
+								>
+									Mostantól leállításig
+								</button>
+								<button
+									type="button"
+									onclick={() => (availabilityType = 'FIXED')}
+									class={`px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${availabilityType === 'FIXED' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}
+								>
+									Megadott időintervallum
+								</button>
+							</div>
+
+							{#if availabilityType === 'FIXED'}
+								<div class="grid grid-cols-2 gap-4 pt-1">
+									<div class="space-y-1.5">
+										<label for="available_from" class="block text-xs font-semibold text-gray-700">Elérhető ettől *</label>
+										<input
+											type="date"
+											id="available_from"
+											bind:value={availableFrom}
+											class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+											required
+										/>
+									</div>
+									<div class="space-y-1.5">
+										<label for="available_until" class="block text-xs font-semibold text-gray-700">Elérhető eddig *</label>
+										<input
+											type="date"
+											id="available_until"
+											bind:value={availableUntil}
+											class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+											required
+										/>
+									</div>
+								</div>
+							{/if}
 						{/if}
 					</div>
 

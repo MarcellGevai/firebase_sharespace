@@ -32,6 +32,11 @@ export type Listing = {
 	latitude?: number | null;
 	longitude?: number | null;
 	location_address?: string;
+	// Owner-declared availability window. Unset means "always available" (today's
+	// default behavior); ONGOING has a start but no end; FIXED has both.
+	availability_type?: 'ONGOING' | 'FIXED' | null;
+	available_from?: string | null;
+	available_until?: string | null;
 	// Denormalized owner snapshot so public browsing never needs to read /users.
 	owner_name?: string;
 	owner_avatar_url?: string;

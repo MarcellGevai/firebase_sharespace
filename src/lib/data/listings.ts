@@ -36,6 +36,9 @@ export type NewListing = {
 	location_address?: string;
 	latitude?: number | null;
 	longitude?: number | null;
+	availability_type?: 'ONGOING' | 'FIXED' | null;
+	available_from?: string | null;
+	available_until?: string | null;
 };
 
 export async function createListing(owner: User, data: NewListing): Promise<string> {
@@ -51,6 +54,9 @@ export async function createListing(owner: User, data: NewListing): Promise<stri
 		location_address: data.location_address ?? null,
 		latitude: data.latitude ?? null,
 		longitude: data.longitude ?? null,
+		availability_type: data.availability_type ?? null,
+		available_from: data.available_from ?? null,
+		available_until: data.available_until ?? null,
 		// Denormalized owner snapshot.
 		owner_name: owner.name,
 		owner_avatar_url: owner.avatar_url,

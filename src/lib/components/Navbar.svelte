@@ -15,6 +15,10 @@
 	// Shared so the icons can't drift apart as they're edited individually.
 	const navIconClass = 'p-2 md:p-3 rounded-xl transition-colors flex items-center justify-center';
 	const navGlyphClass = 'w-5 h-5 md:w-6 md:h-6';
+	// pointer-events-none so the label can never swallow a click meant for the
+	// icon underneath it.
+	const tooltipClass =
+		'pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 rounded-md bg-gray-900 text-white text-xs font-medium whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150 z-50';
 
 	async function handleLogout() {
 		await logout();
@@ -102,6 +106,25 @@
 	}
 </script>
 
+<!--
+	One icon + hover label. Kept as a snippet so every nav icon shares the same
+	sizing, active state and tooltip rather than drifting as they're edited.
+	The label is aria-hidden: the <a>'s aria-label already announces it, and a
+	screen reader shouldn't hear the name twice.
+-->
+{#snippet navItem(href: string, label: string, Icon: typeof LayoutList)}
+	<div class="relative group/nav">
+		<a
+			{href}
+			class={`${navIconClass} ${isActive(href) ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`}
+			aria-label={label}
+		>
+			<Icon class={navGlyphClass} />
+		</a>
+		<span class={tooltipClass} aria-hidden="true">{label}</span>
+	</div>
+{/snippet}
+
 <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
 	<!-- Wider than the app's max-w-2xl content column from md up: the bar is packed
 	     to the pixel at 2xl (logo + search + actions exactly fill it), so the
@@ -185,20 +208,12 @@
 		<div class="flex items-center gap-2">
 			<!-- Actions -->
 			<div class="hidden md:flex items-center gap-2 lg:gap-3">
-			<a href="/feed" class={`${navIconClass} ${isActive('/feed') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Hirdetések">
-				<LayoutList class={navGlyphClass} />
-			</a>
-			<a href="/" class={`${navIconClass} ${isActive('/') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Térkép">
-				<Map class={navGlyphClass} />
-			</a>
+			{@render navItem('/feed', 'Hirdetések', LayoutList)}
+			{@render navItem('/', 'Térkép', Map)}
 			{#if currentUser}
 				<NotificationDropdown />
-				<a href="/rentals" class={`${navIconClass} ${isActive('/rentals') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Bérléseim">
-					<Clock class={navGlyphClass} />
-				</a>
-				<a href="/inbox" class={`${navIconClass} ${isActive('/inbox') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Üzenetek">
-					<MessageCircle class={navGlyphClass} />
-				</a>
+				{@render navItem('/rentals', 'Bérléseim', Clock)}
+				{@render navItem('/inbox', 'Üzenetek', MessageCircle)}
 				<div class="h-8 w-px bg-gray-200 mx-2"></div>
 				<div class="flex items-center gap-3">
 					<a href={`/profile/${currentUser.id}`} class="flex items-center gap-3 hover:opacity-80 transition-opacity">
@@ -217,9 +232,10 @@
 		</div>
 
 		<!-- Category Menu -->
-		<div class="relative ml-2">
-			<button 
-				aria-label="Open categories menu" 
+		<div class="relative ml-2 group/nav">
+			<button
+				aria-label="Kategóriák"
+				aria-expanded={isCategoryMenuOpen}
 				onclick={() => isCategoryMenuOpen = !isCategoryMenuOpen}
 				class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center"
 			>
@@ -229,6 +245,11 @@
 					<Menu class="w-6 h-6" />
 				{/if}
 			</button>
+			<!-- Suppressed while open, so the label isn't left hovering over the panel
+			     it just opened. -->
+			{#if !isCategoryMenuOpen}
+				<span class={tooltipClass} aria-hidden="true">Kategóriák</span>
+			{/if}
 
 			{#if isCategoryMenuOpen}
 				<div class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">

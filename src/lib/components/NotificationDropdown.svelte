@@ -91,11 +91,12 @@
 	});
 </script>
 
-<div class="relative" bind:this={dropdownRef}>
+<div class="relative group/nav" bind:this={dropdownRef}>
 	<button
 		onclick={toggleDropdown}
 		class="p-2 md:p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors relative"
 		aria-label="Értesítések"
+		aria-expanded={isOpen}
 	>
 		<Bell class="w-5 h-5 md:w-6 md:h-6" />
 		{#if unreadCount > 0}
@@ -104,6 +105,17 @@
 			</span>
 		{/if}
 	</button>
+
+	<!-- Matches the Navbar's other icon tooltips; suppressed while the panel is
+	     open so the label isn't left hovering over it. -->
+	{#if !isOpen}
+		<span
+			class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 rounded-md bg-gray-900 text-white text-xs font-medium whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150 z-50"
+			aria-hidden="true"
+		>
+			Értesítések
+		</span>
+	{/if}
 
 	{#if isOpen}
 		<div class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">

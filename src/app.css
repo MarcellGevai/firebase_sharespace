@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+/*
+  Tailwind v4 dropped v3's `button { cursor: pointer }` preflight rule, so every
+  <button> falls back to the browser default (`cursor: default`) while <a> links
+  keep the hand - which is why the link-based nav tabs felt right and every real
+  button felt dead. Restore it once here rather than adding `cursor-pointer` to
+  each of the ~70 buttons, so new ones are covered by default too.
+
+  Deliberately low specificity (0,1,1): MapLibre's own cursors, e.g.
+  `.maplibregl-ctrl-group button.maplibregl-ctrl-compass { cursor: grab }` at
+  (0,2,1), must keep winning over this.
+*/
+@layer base {
+	button:not(:disabled),
+	[role='button']:not(:disabled) {
+		cursor: pointer;
+	}
+}

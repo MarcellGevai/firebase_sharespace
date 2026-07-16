@@ -32,15 +32,20 @@
 		return null;
 	}
 
+	// Under a day, hours alone are too coarse to be useful (a 20-minute rental
+	// would read "0 nap 0 óra"), so drop the dead "nap" and show minutes instead.
+	// Past 24h the minutes stop earning their place and days/hours read better.
 	function formatDuration(ms: number): string {
-		const totalHours = Math.max(0, Math.floor(ms / 3600000));
-		const days = Math.floor(totalHours / 24);
-		const hours = totalHours % 24;
-		return `${days} nap ${hours} óra`;
+		const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+		const totalHours = Math.floor(totalMinutes / 60);
+		if (totalHours < 24) {
+			return `${totalHours} óra ${totalMinutes % 60} perc`;
+		}
+		return `${Math.floor(totalHours / 24)} nap ${totalHours % 24} óra`;
 	}
 
 	onMount(() => {
-		// Display only changes at whole-hour granularity now, so no need to tick every second.
+		// Finest unit shown is the minute, so a per-minute tick is exactly enough.
 		const tickInterval = setInterval(() => (now = Date.now()), 60000);
 
 		(async () => {

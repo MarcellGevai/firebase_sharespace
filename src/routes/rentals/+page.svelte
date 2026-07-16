@@ -73,8 +73,11 @@
 					return {
 						request,
 						otherUserName: otherUser?.name ?? 'Ismeretlen felhasználó',
-						listingTitle: listing?.title ?? 'Törölt hirdetés',
-						listingImage: listing?.image_url ?? '',
+						// Prefer the snapshot on the deal: listing_id may point at a
+						// /wants doc (an offer), and a listing can be deleted after the
+						// fact. Deals predating the snapshot fall back to the lookup.
+						listingTitle: request.item_title || listing?.title || 'Törölt hirdetés',
+						listingImage: request.item_image || listing?.image_url || '',
 						isOwner
 					};
 				})

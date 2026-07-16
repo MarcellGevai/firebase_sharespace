@@ -50,8 +50,11 @@
 		try {
 			await sendMessage({
 				listing_id: chatContext.listingId,
-				listing_title: chatContext.listing?.title ?? '',
-				listing_image: chatContext.listing?.image_url ?? '',
+				// The deal's snapshot covers offers, whose listing_id points at a
+				// /wants doc that getListing can't resolve. Falls back to the listing
+				// for chats that have no deal yet.
+				listing_title: request?.item_title || chatContext.listing?.title || '',
+				listing_image: request?.item_image || chatContext.listing?.image_url || '',
 				sender_id: me.id,
 				receiver_id: chatContext.otherUserId,
 				content: text

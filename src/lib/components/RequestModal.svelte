@@ -1,22 +1,34 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { chatUrl } from '$lib/chat';
-	import { X, CalendarClock } from 'lucide-svelte';
+	import { X, CalendarClock, Search } from 'lucide-svelte';
 	import { currentUser } from '$lib/auth';
 	import { createRequest } from '$lib/data/requests';
 	import { sendMessage } from '$lib/data/messages';
 	import { createNotification } from '$lib/data/notifications';
 
+	/**
+	 * Two directions through the same deal:
+	 *  - listing mode (`listing` + `owner`): I want your item. I'm the borrower.
+	 *  - want mode (`want`): you asked for an item, I have one. I'm the lender.
+	 *
+	 * Roles on the deal are by function, never by who clicked: owner_id always
+	 * provides the item, requester_id always receives it. The handover handshake
+	 * depends on that (the owner initiates, the requester confirms receipt), so
+	 * an offer on a want makes ME the owner and the want's author the requester.
+	 */
 	let {
-		isOpen, 
-		listing, 
-		owner,
-		onClose 
-	}: { 
-		isOpen: boolean; 
-		listing: any; 
-		owner: any;
-		onClose: () => void; 
+		isOpen,
+		listing = null,
+		owner = null,
+		want = null,
+		onClose
+	}: {
+		isOpen: boolean;
+		listing?: any;
+		owner?: any;
+		want?: any;
+		onClose: () => void;
 	} = $props();
 
 	let startDate = $state('');
@@ -27,16 +39,37 @@
 	let isSubmitting = $state(false);
 	let errorMsg = $state('');
 
-	// If the owner declared a fixed availability window, the requester's dates
-	// must fall inside it; an ongoing/unset window leaves date pickers open.
-	let isFixedAvailability = $derived(listing?.availability_type === 'FIXED');
-	let availabilityMin = $derived(isFixedAvailability ? listing.available_from : undefined);
-	let availabilityMax = $derived(isFixedAvailability ? listing.available_until : undefined);
+	let isOffer = $derived(!!want);
+	// What's being transacted, and who the other side is.
+	let subjectId = $derived(isOffer ? want.id : listing?.id);
+	let subjectTitle = $derived(isOffer ? want.title : (listing?.title ?? ''));
+	let subjectImage = $derived(isOffer ? '' : (listing?.image_url ?? ''));
+	let counterpartyId = $derived(isOffer ? want.requester_id : owner?.id);
+
+	// A want already states the window it needs, so an offer is constrained by it
+	// exactly the way a listing's FIXED availability constrains a request.
+	let isFixedAvailability = $derived(isOffer ? true : listing?.availability_type === 'FIXED');
+	let availabilityMin = $derived(
+		isOffer ? want.date_from : isFixedAvailability ? listing?.available_from : undefined
+	);
+	let availabilityMax = $derived(
+		isOffer ? want.date_to : isFixedAvailability ? listing?.available_until : undefined
+	);
 
 	$effect(() => {
 		if (isOpen && recommendedPrice === 0) {
-			recommendedPrice = Math.floor(Math.random() * 5000) + 1000;
+			// An offer has a stated budget to aim at; a listing doesn't, hence the
+			// placeholder suggestion the listing flow already used.
+			recommendedPrice = isOffer
+				? Math.round(((Number(want.price_min) || 0) + (Number(want.price_max) || 0)) / 2)
+				: Math.floor(Math.random() * 5000) + 1000;
 			priceOffer = recommendedPrice;
+			// Seed the dates from the window the requester asked for - most offers
+			// will simply take it.
+			if (isOffer) {
+				startDate = want.date_from ?? '';
+				endDate = want.date_to ?? '';
+			}
 		}
 		if (!isOpen) {
 			recommendedPrice = 0; // reset
@@ -59,11 +92,15 @@
 		}
 		if (isFixedAvailability) {
 			if (availabilityMin && startDate < availabilityMin) {
-				errorMsg = `A hirdetés csak ${availabilityMin}-től érhető el.`;
+				errorMsg = isOffer
+					? `Az igény csak ${availabilityMin}-től szól.`
+					: `A hirdetés csak ${availabilityMin}-től érhető el.`;
 				return;
 			}
 			if (availabilityMax && endDate > availabilityMax) {
-				errorMsg = `A hirdetés csak ${availabilityMax}-ig érhető el.`;
+				errorMsg = isOffer
+					? `Az igény csak ${availabilityMax}-ig szól.`
+					: `A hirdetés csak ${availabilityMax}-ig érhető el.`;
 				return;
 			}
 		}
@@ -76,35 +113,41 @@
 		errorMsg = '';
 
 		try {
-			// 1. Create the deal request.
+			// 1. Create the deal. Whoever provides the item is owner_id regardless of
+			//    who opened it, and the other party owes the first response.
 			await createRequest({
-				listing_id: listing.id,
-				owner_id: owner.id,
-				requester_id: me.id,
+				listing_id: subjectId,
+				owner_id: isOffer ? me.id : owner.id,
+				requester_id: isOffer ? want.requester_id : me.id,
+				awaiting_response_from: counterpartyId,
 				start_date: startDate,
 				end_date: endDate,
-				price_offer: Number(priceOffer)
+				price_offer: Number(priceOffer),
+				item_title: subjectTitle,
+				item_image: subjectImage
 			});
 
-			// 2. Optional opening message to the owner.
+			// 2. Optional opening message to the other party.
 			if (message && message.trim().length > 0) {
 				await sendMessage({
-					listing_id: listing.id,
-					listing_title: listing.title,
-					listing_image: listing.image_url,
+					listing_id: subjectId,
+					listing_title: subjectTitle,
+					listing_image: subjectImage,
 					sender_id: me.id,
-					receiver_id: owner.id,
+					receiver_id: counterpartyId,
 					content: message.trim()
 				});
 			}
 
-			// 3. Notify the owner (links to their view of this conversation).
+			// 3. Notify them (links to their view of this conversation).
 			await createNotification({
-				user_id: owner.id,
+				user_id: counterpartyId,
 				type: 'NEW_REQUEST',
-				title: 'Új érdeklődés érkezett!',
-				body: `${me.name} érdeklődik a(z) "${listing.title}" hirdetésed iránt.`,
-				link: chatUrl(listing.id, me.id)
+				title: isOffer ? 'Új ajánlat érkezett!' : 'Új érdeklődés érkezett!',
+				body: isOffer
+					? `${me.name} ajánlatot tett a(z) "${subjectTitle}" igényedre.`
+					: `${me.name} érdeklődik a(z) "${subjectTitle}" hirdetésed iránt.`,
+				link: chatUrl(subjectId, me.id)
 			});
 
 			// Success! Close modal and reset
@@ -113,8 +156,8 @@
 			message = '';
 			onClose();
 
-			// Redirect to chat with the owner
-			goto(chatUrl(listing.id, owner.id));
+			// Redirect to the shared conversation, where DealManager now has a deal.
+			goto(chatUrl(subjectId, counterpartyId));
 		} catch (err: any) {
 			console.error('Request submit failed:', err);
 			errorMsg = err?.message ?? 'Hiba történt a kérés elküldésekor.';
@@ -124,16 +167,22 @@
 	}
 </script>
 
-{#if isOpen && listing}
+{#if isOpen && (listing || want)}
 	<!-- Backdrop -->
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm transition-opacity">
-		
+
 		<!-- Modal Content -->
 		<div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden relative" role="dialog" aria-modal="true">
-			
+
 			<!-- Header -->
 			<div class="flex items-center justify-between p-4 border-b border-gray-100">
-				<h2 class="text-lg font-bold text-gray-900">Request {listing.type === 'ITEM' ? 'Item' : 'Service'}</h2>
+				<h2 class="text-lg font-bold text-gray-900">
+					{#if isOffer}
+						Ajánlat tétel
+					{:else}
+						Request {listing.type === 'ITEM' ? 'Item' : 'Service'}
+					{/if}
+				</h2>
 				<button onclick={onClose} class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
 					<X class="w-5 h-5" />
 				</button>
@@ -141,19 +190,36 @@
 
 			<!-- Body -->
 			<div class="p-4 space-y-4">
-				
-				<!-- Listing Preview -->
+
+				<!-- Subject preview. Wants carry no photo, so they get a glyph tile. -->
 				<div class="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
-					<img src={listing.image_url} alt={listing.title} class="w-16 h-16 rounded-lg object-cover bg-gray-200" />
-					<div>
-						<h3 class="font-semibold text-gray-900">{listing.title}</h3>
-						<p class="text-xs text-gray-500 uppercase font-semibold tracking-wide">{listing.type}</p>
-					</div>
+					{#if isOffer}
+						<div class="w-16 h-16 rounded-lg bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+							<Search class="w-6 h-6" />
+						</div>
+						<div class="min-w-0">
+							<h3 class="font-semibold text-gray-900 truncate">{want.title}</h3>
+							<p class="text-xs text-red-600 uppercase font-semibold tracking-wide">Igény</p>
+							{#if want.price_min != null && want.price_max != null}
+								<p class="text-xs text-gray-500 mt-0.5">Elképzelt ár: {want.price_min} – {want.price_max} Ft</p>
+							{/if}
+						</div>
+					{:else}
+						<img src={listing.image_url} alt={listing.title} class="w-16 h-16 rounded-lg object-cover bg-gray-200" />
+						<div>
+							<h3 class="font-semibold text-gray-900">{listing.title}</h3>
+							<p class="text-xs text-gray-500 uppercase font-semibold tracking-wide">{listing.type}</p>
+						</div>
+					{/if}
 				</div>
 
 				{#if isFixedAvailability}
 					<p class="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-						Ez a hirdetés csak {availabilityMin} és {availabilityMax} között érhető el.
+						{#if isOffer}
+							Erre az igényre {availabilityMin} és {availabilityMax} között lehet ajánlatot tenni.
+						{:else}
+							Ez a hirdetés csak {availabilityMin} és {availabilityMax} között érhető el.
+						{/if}
 					</p>
 				{/if}
 
@@ -200,7 +266,9 @@
 
 				<!-- Message -->
 				<div class="space-y-1.5">
-					<label for="message" class="block text-sm font-semibold text-gray-700">Message to Owner (Optional)</label>
+					<label for="message" class="block text-sm font-semibold text-gray-700">
+						{isOffer ? 'Üzenet (opcionális)' : 'Message to Owner (Optional)'}
+					</label>
 					<textarea 
 						id="message" 
 						bind:value={message}
@@ -233,7 +301,7 @@
 						Sending...
 					{:else}
 						<CalendarClock class="w-4 h-4" />
-						Submit Request
+						{isOffer ? 'Ajánlat elküldése' : 'Submit Request'}
 					{/if}
 				</button>
 			</div>

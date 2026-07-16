@@ -77,8 +77,15 @@ export type HandoverStatus =
 
 export type DealRequest = {
 	id: string;
+	/**
+	 * The thing being transacted: a /listings id for a normal rental, or a /wants
+	 * id when someone offered on a request. The name is historical - it also keys
+	 * the conversation (see chat.ts).
+	 */
 	listing_id: string;
+	/** Provides the item (lender). For an offer on a want, that's the offerer. */
 	owner_id: string;
+	/** Receives the item (borrower). For an offer on a want, that's its author. */
 	requester_id: string;
 	participants: string[];
 	start_date: string;
@@ -89,6 +96,11 @@ export type DealRequest = {
 	// accept/reject/modify the offer above. Absent on requests created before
 	// this field existed - treat missing as "owner_id" (today's default).
 	awaiting_response_from?: string;
+	// Snapshot of what's being transacted, taken at creation. Denormalized because
+	// listing_id may point at a /wants doc, and because owners can delete a
+	// listing out from under a finished deal.
+	item_title?: string;
+	item_image?: string;
 	handover_status: HandoverStatus;
 	handover_initiated_at?: unknown;
 	return_initiated_at?: unknown;

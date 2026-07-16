@@ -19,21 +19,38 @@ import { db } from '../firebase';
 import type { DealRequest, HandoverStatus } from '../types';
 
 export type NewRequest = {
+	/** A /listings id, or a /wants id when offering on a request. */
 	listing_id: string;
 	owner_id: string;
 	requester_id: string;
 	start_date: string;
 	end_date: string;
 	price_offer: number;
+	/**
+	 * Who owes the first reply - always the party who did NOT open the deal.
+	 * A borrower requesting a listing hands the turn to the owner; a lender
+	 * offering on a want hands it to the want's author. Passed in rather than
+	 * assumed, since either side can now open a deal.
+	 */
+	awaiting_response_from: string;
+	item_title?: string;
+	item_image?: string;
 };
 
 export async function createRequest(data: NewRequest): Promise<string> {
 	const ref = await addDoc(collection(db, 'requests'), {
-		...data,
+		listing_id: data.listing_id,
+		owner_id: data.owner_id,
+		requester_id: data.requester_id,
+		start_date: data.start_date,
+		end_date: data.end_date,
+		price_offer: data.price_offer,
+		awaiting_response_from: data.awaiting_response_from,
+		// Firestore rejects undefined outright, so these must be real strings.
+		item_title: data.item_title ?? '',
+		item_image: data.item_image ?? '',
 		participants: [data.owner_id, data.requester_id],
 		status: 'PENDING',
-		// The requester makes the opening offer, so the owner responds first.
-		awaiting_response_from: data.owner_id,
 		handover_status: 'PENDING',
 		handover_initiated_at: null,
 		return_initiated_at: null,

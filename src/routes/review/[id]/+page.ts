@@ -14,9 +14,14 @@ export const load: PageLoad = async ({ params }) => {
 	const req = await getRequest(params.id);
 	if (!req) throw redirect(302, '/inbox');
 
+	// Take the owner from the deal, not the listing. The listing may not exist at
+	// all - listing_id points at a /wants doc for an offer, and owners can delete
+	// a listing out from under a finished deal - in which case this used to
+	// resolve to undefined, bouncing the owner out of their own review and
+	// pointing the requester's review at `undefined`.
+	const owner_id = req.owner_id;
 	const listing = await getListing(req.listing_id);
-	const owner_id = listing?.owner_id;
-	const listing_title = listing?.title ?? '';
+	const listing_title = req.item_title || listing?.title || '';
 
 	// Only the two parties, and only after the item was returned, may review.
 	if (me.id !== req.requester_id && me.id !== owner_id) throw redirect(302, '/inbox');
@@ -24,7 +29,7 @@ export const load: PageLoad = async ({ params }) => {
 		throw redirect(302, '/inbox');
 	}
 
-	const reviewee_id = me.id === req.requester_id ? (owner_id as string) : req.requester_id;
+	const reviewee_id = me.id === req.requester_id ? owner_id : req.requester_id;
 
 	if (await hasReviewed(req.id, me.id)) {
 		return { alreadyReviewed: true, listing_title, request_id: req.id, reviewee_id, reviewee: null };

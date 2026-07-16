@@ -168,13 +168,27 @@ service cloud.firestore {
 		}
 		match /requests/{id} {
 			allow read: if signedIn() && isParty();
+			// Either party may open a deal: a borrower requesting a listing, or a
+			// lender making an offer on someone's want. Roles are by function, not by
+			// who clicked - owner_id always provides the item and requester_id always
+			// receives it, which is what initHandover()/acceptHandover() below rely on.
+			// Whoever opens it hands the first turn to the other party; nobody gets to
+			// open a deal that's already waiting on the person they opened it against.
 			allow create: if signedIn()
-				&& request.resource.data.requester_id == uid()
+				&& (uid() == request.resource.data.requester_id || uid() == request.resource.data.owner_id)
+				&& request.resource.data.owner_id != request.resource.data.requester_id
 				&& request.resource.data.status == 'PENDING'
-				&& request.resource.data.awaiting_response_from == request.resource.data.owner_id
 				&& request.resource.data.handover_status == 'PENDING'
-				&& uid() in request.resource.data.participants
-				&& request.resource.data.participants.size() == 2;
+				&& request.resource.data.awaiting_response_from != uid()
+				&& (request.resource.data.awaiting_response_from == request.resource.data.owner_id
+					|| request.resource.data.awaiting_response_from == request.resource.data.requester_id)
+				// participants drives read access (isParty), so it must be exactly the
+				// two roles - not an arbitrary pair the creator picked.
+				&& request.resource.data.participants.size() == 2
+				&& request.resource.data.participants.hasAll([
+					request.resource.data.owner_id,
+					request.resource.data.requester_id
+				]);
 			allow update: if signedIn() && isParty()
 				// Core identity fields can never be reassigned.
 				&& request.resource.data.owner_id == resource.data.owner_id

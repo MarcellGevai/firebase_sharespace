@@ -165,8 +165,11 @@
 						<!-- There's no listing detail route, so the card opens the same
 						     RequestModal the feed uses. On your own profile there's nothing
 						     to request, so it stays a plain tile. -->
+						<!-- role is redundant on a real <button>, but svelte:element is
+						     dynamic so static analysis can't tell what `this` resolves to. -->
 						<svelte:element
 							this={isOwnProfile ? 'div' : 'button'}
+							role={isOwnProfile ? undefined : 'button'}
 							onclick={isOwnProfile ? undefined : () => (requestListing = listing)}
 							class="text-left bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden {isOwnProfile
 								? ''

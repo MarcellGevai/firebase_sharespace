@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Want } from '$lib/types';
-	import { chatUrl } from '$lib/chat';
 	import { formatDistance } from '$lib/distance';
-	import { Search, MessageCircle, Calendar, MapPin } from 'lucide-svelte';
+	import RequestModal from './RequestModal.svelte';
+	import { Search, Calendar, MapPin, HandCoins } from 'lucide-svelte';
 
 	// null when the want predates carrying a location, or the viewer has no
 	// baseline to measure from.
@@ -12,12 +12,17 @@
 		distanceKm = null
 	}: { want: Want; currentUser?: any; distanceKm?: number | null } = $props();
 
-	function handleMessage() {
+	let isOfferOpen = $state(false);
+
+	// Offering opens the same deal flow a listing uses, rather than a bare chat:
+	// it creates the transaction, so the conversation opens with the deal panel
+	// already on top of the message wall.
+	function handleOffer() {
 		if (!currentUser) {
 			window.location.href = '/login';
 			return;
 		}
-		window.location.href = chatUrl(want.id, want.requester_id);
+		isOfferOpen = true;
 	}
 
 	function formatDate(d: string) {
@@ -66,11 +71,11 @@
 		<!-- Actions -->
 		{#if !currentUser || currentUser.id !== want.requester_id}
 			<button
-				onclick={handleMessage}
+				onclick={handleOffer}
 				class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
 			>
-				<MessageCircle class="w-4 h-4" />
-				Üzenet küldése
+				<HandCoins class="w-4 h-4" />
+				Ajánlat tétel
 			</button>
 		{:else}
 			<div class="w-full text-center text-sm font-semibold text-gray-400 py-2.5">
@@ -79,3 +84,5 @@
 		{/if}
 	</div>
 </article>
+
+<RequestModal isOpen={isOfferOpen} {want} onClose={() => (isOfferOpen = false)} />

@@ -208,6 +208,12 @@
 						placeholder="Message..."
 						class="w-full bg-transparent border-none focus:ring-0 resize-none py-3 px-4 max-h-32 text-sm"
 						required
+						onkeydown={(e) => {
+							if (e.key === 'Enter' && !e.shiftKey) {
+								e.preventDefault();
+								handleSend(e);
+							}
+						}}
 					></textarea>
 				</div>
 				<button

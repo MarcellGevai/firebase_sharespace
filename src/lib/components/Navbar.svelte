@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Search, Bell, MessageCircle, Menu, X, Map, LayoutList, Clock } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { User, Listing } from '$lib/types';
 	import { CATEGORIES } from '$lib/categories';
 	import NotificationDropdown from './NotificationDropdown.svelte';
@@ -16,6 +17,11 @@
 	}
 
 	let isCategoryMenuOpen = $state(false);
+
+	// "/" (the map) needs an exact match - every route "starts with" "/".
+	function isActive(path: string): boolean {
+		return path === '/' ? $page.url.pathname === '/' : $page.url.pathname.startsWith(path);
+	}
 
 	// Global search: users (new) + listings by title, in a dropdown below the bar.
 	let searchQuery = $state('');
@@ -129,18 +135,18 @@
 		<div class="flex items-center gap-2">
 			<!-- Actions -->
 			<div class="hidden md:flex items-center gap-4">
-			<a href="/feed" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" aria-label="Hirdetések">
+			<a href="/feed" class={`p-2 rounded-xl transition-colors ${isActive('/feed') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Hirdetések">
 				<LayoutList class="w-5 h-5" />
 			</a>
-			<a href="/" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" aria-label="Térkép">
+			<a href="/" class={`p-2 rounded-xl transition-colors ${isActive('/') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Térkép">
 				<Map class="w-5 h-5" />
 			</a>
 			{#if currentUser}
 				<NotificationDropdown />
-				<a href="/rentals" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" aria-label="Bérléseim">
+				<a href="/rentals" class={`p-2 rounded-xl transition-colors ${isActive('/rentals') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Bérléseim">
 					<Clock class="w-5 h-5" />
 				</a>
-				<a href="/inbox" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+				<a href="/inbox" class={`p-2 rounded-xl transition-colors ${isActive('/inbox') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Üzenetek">
 					<MessageCircle class="w-5 h-5" />
 				</a>
 				<div class="h-8 w-px bg-gray-200 mx-2"></div>
@@ -204,23 +210,23 @@
 				<span class="text-sm font-semibold text-gray-900">{currentUser.name}</span>
 			</a>
 			<div class="flex items-center gap-3">
-				<a href="/feed" class="p-1.5 text-gray-500 hover:text-blue-600 rounded-lg transition-colors" aria-label="Hirdetések">
+				<a href="/feed" class={`p-1.5 rounded-lg transition-colors ${isActive('/feed') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} aria-label="Hirdetések">
 					<LayoutList class="w-5 h-5" />
 				</a>
-				<a href="/" class="p-1.5 text-gray-500 hover:text-blue-600 rounded-lg transition-colors" aria-label="Térkép">
+				<a href="/" class={`p-1.5 rounded-lg transition-colors ${isActive('/') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} aria-label="Térkép">
 					<Map class="w-5 h-5" />
 				</a>
-				<a href="/rentals" class="p-1.5 text-gray-500 hover:text-blue-600 rounded-lg transition-colors" aria-label="Bérléseim">
+				<a href="/rentals" class={`p-1.5 rounded-lg transition-colors ${isActive('/rentals') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} aria-label="Bérléseim">
 					<Clock class="w-5 h-5" />
 				</a>
 				<button onclick={handleLogout} class="text-xs text-red-600 font-semibold px-2 py-1">Logout</button>
 			</div>
 		{:else}
 			<div class="flex items-center gap-2">
-				<a href="/feed" class="p-1.5 text-gray-500 hover:text-blue-600 rounded-lg transition-colors" aria-label="Hirdetések">
+				<a href="/feed" class={`p-1.5 rounded-lg transition-colors ${isActive('/feed') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} aria-label="Hirdetések">
 					<LayoutList class="w-5 h-5" />
 				</a>
-				<a href="/" class="p-1.5 text-gray-500 hover:text-blue-600 rounded-lg transition-colors" aria-label="Térkép">
+				<a href="/" class={`p-1.5 rounded-lg transition-colors ${isActive('/') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} aria-label="Térkép">
 					<Map class="w-5 h-5" />
 				</a>
 			</div>

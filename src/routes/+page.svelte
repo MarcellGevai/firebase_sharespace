@@ -14,17 +14,42 @@
 		CircleQuestionMark,
 		X,
 		CalendarClock,
-		Search
+		Search,
+		SlidersHorizontal,
+		Check,
+		MessageCircle
 	} from 'lucide-svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import RequestModal from '$lib/components/RequestModal.svelte';
 	import { CATEGORIES } from '$lib/categories';
+	import { chatUrl } from '$lib/chat';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	type MapItem = PageData['items'][number];
+	type MapWant = PageData['wantItems'][number];
+
+	/**
+	 * Listings and wants are different shapes but need identical treatment on the
+	 * map (filter -> group -> cluster -> pin), so they're normalized to one entry
+	 * type here and only pulled apart again in the detail sheet.
+	 */
+	type Entry = {
+		kind: 'LISTING' | 'WANT';
+		id: string;
+		partyId: string;
+		title: string;
+		description: string;
+		category?: string;
+		imageUrl?: string;
+		position: { lat: number; lon: number };
+		item?: MapItem;
+		want?: MapWant;
+	};
+
+	type MapTab = 'LISTINGS' | 'WANTS';
 
 	const BUDAPEST_CENTER: [number, number] = [19.0402, 47.4979];
 	const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
@@ -48,6 +73,8 @@
 	};
 
 	const DEFAULT_COLOR = '#64748b';
+	// Matches the red "Igény" FAB, so want pins/clusters read as the same thing.
+	const WANT_COLOR = '#dc2626';
 
 	// Cluster radius in px; past CLUSTER_MAX_ZOOM every pin stands on its own.
 	const CLUSTER_RADIUS = 60;
@@ -63,7 +90,7 @@
 	let mapLoaded = $state(false);
 
 	let selfPosition: [number, number] | null = $state(null);
-	let selectedGroup: MapItem[] = $state([]);
+	let selectedGroup: Entry[] = $state([]);
 	let isSheetOpen = $state(false);
 	let requestListing: MapItem['listing'] | null = $state(null);
 	let requestOwner: MapItem['owner'] | null = $state(null);
@@ -71,11 +98,16 @@
 	let activeCategory = $state($page.url.searchParams.get('category') ?? '');
 	let searchQuery = $state($page.url.searchParams.get('q') ?? '');
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let activeTab = $state<MapTab>(
+		$page.url.searchParams.get('tab') === 'wants' ? 'WANTS' : 'LISTINGS'
+	);
+	let isFilterOpen = $state(false);
 
 	function syncUrl() {
 		const params = new URLSearchParams();
 		if (activeCategory) params.set('category', activeCategory);
 		if (searchQuery) params.set('q', searchQuery);
+		if (activeTab === 'WANTS') params.set('tab', 'wants');
 		const qs = params.toString();
 		goto(qs ? `?${qs}` : '?', { replaceState: true, noScroll: true, keepFocus: true });
 	}
@@ -91,33 +123,83 @@
 		searchDebounceTimer = setTimeout(syncUrl, 300);
 	}
 
+	// The toggle picks the source; everything downstream is kind-agnostic.
+	let entries = $derived.by<Entry[]>(() =>
+		activeTab === 'LISTINGS'
+			? data.items.map((item: MapItem) => ({
+					kind: 'LISTING' as const,
+					id: item.listing.id,
+					partyId: item.owner.id,
+					title: item.listing.title,
+					description: item.listing.description ?? '',
+					category: item.listing.category,
+					imageUrl: item.listing.image_url,
+					position: item.position,
+					item
+				}))
+			: data.wantItems.map((w: MapWant) => ({
+					kind: 'WANT' as const,
+					id: w.want.id,
+					partyId: w.requester.id,
+					title: w.want.title,
+					description: w.want.description ?? '',
+					category: w.want.category,
+					// Wants carry no photo, so their pins always fall back to the
+					// category glyph - which is also what visually separates them.
+					imageUrl: undefined,
+					position: w.position,
+					want: w
+				}))
+	);
+
 	let filteredItems = $derived.by(() => {
 		const query = searchQuery.trim().toLowerCase();
-		return data.items.filter((item: MapItem) => {
-			const categoryMatch = !activeCategory || item.listing.category === activeCategory;
+		return entries.filter((e) => {
+			const categoryMatch = !activeCategory || e.category === activeCategory;
 			const searchMatch =
-				!query ||
-				item.listing.title.toLowerCase().includes(query) ||
-				(item.listing.description ?? '').toLowerCase().includes(query);
+				!query || e.title.toLowerCase().includes(query) || e.description.toLowerCase().includes(query);
 			return categoryMatch && searchMatch;
 		});
 	});
 
-	// Fuzzed positions are identical for every listing from the same owner,
-	// so group by owner and show one marker per location.
+	// Fuzzed positions are identical for everything from the same person, so group
+	// by owner/requester and show one marker per location.
 	let groups = $derived.by(() => {
-		const grouped = new Map<string, MapItem[]>();
-		for (const item of filteredItems) {
-			const key = item.owner.id;
-			if (!grouped.has(key)) grouped.set(key, []);
-			grouped.get(key)!.push(item);
+		const grouped = new Map<string, Entry[]>();
+		for (const entry of filteredItems) {
+			if (!grouped.has(entry.partyId)) grouped.set(entry.partyId, []);
+			grouped.get(entry.partyId)!.push(entry);
 		}
 		return Array.from(grouped.values());
 	});
 
-	function openGroup(group: MapItem[]) {
+	function openGroup(group: Entry[]) {
 		selectedGroup = group;
 		isSheetOpen = true;
+	}
+
+	// The sheet header shows whoever the group belongs to - owner or requester -
+	// normalized to one shape. Wants denormalize no locality snapshot the way
+	// listings do, so theirs is blank and the line is simply omitted.
+	let sheetParty = $derived.by(() => {
+		const first = selectedGroup[0];
+		if (!first) return null;
+		if (first.kind === 'LISTING') {
+			const o = first.item!.owner;
+			return { name: o.name, avatar_url: o.avatar_url, location: o.location };
+		}
+		const r = first.want!.requester;
+		return { name: r.name, avatar_url: r.avatar_url, location: '' };
+	});
+
+	function formatShortDate(d: string | undefined) {
+		if (!d) return '';
+		return new Date(d).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' });
+	}
+
+	function contactWant(entry: Entry) {
+		if (!entry.want) return;
+		goto(chatUrl(entry.want.want.id, entry.want.requester.id));
 	}
 
 	function closeSheet() {
@@ -134,17 +216,21 @@
 		requestOwner = null;
 	}
 
-	function createMarkerElement(group: MapItem[]) {
-		const primaryCategory = group[0].listing.category ?? '';
+	function createMarkerElement(group: Entry[]) {
+		const primaryCategory = group[0].category ?? '';
 		const Icon = CATEGORY_ICONS[primaryCategory] ?? CircleQuestionMark;
-		const color = CATEGORY_COLORS[primaryCategory] ?? DEFAULT_COLOR;
-		const imageUrl = group[0].listing.image_url;
+		// Wants take the Igény red across the board rather than the category
+		// colour, matching the red "Igény" button and keeping the two kinds
+		// tellable apart at a glance.
+		const color =
+			group[0].kind === 'WANT' ? WANT_COLOR : (CATEGORY_COLORS[primaryCategory] ?? DEFAULT_COLOR);
+		const imageUrl = group[0].imageUrl;
 
 		const el = document.createElement('button');
 		el.type = 'button';
 		el.className = 'listing-marker';
 		el.style.setProperty('--marker-color', color);
-		el.setAttribute('aria-label', group[0].listing.title);
+		el.setAttribute('aria-label', group[0].title);
 
 		let iconInstance = null;
 		if (imageUrl) {
@@ -169,6 +255,13 @@
 		el.addEventListener('click', () => openGroup(group));
 
 		return { el, iconInstance };
+	}
+
+	function setTab(tab: MapTab) {
+		if (activeTab === tab) return;
+		activeTab = tab;
+		isSheetOpen = false;
+		syncUrl();
 	}
 
 	/** A merged pin: circle with the number of groups hidden inside it. */
@@ -333,6 +426,19 @@
 <div class="relative h-full w-full">
 	<div bind:this={mapContainer} class="h-full w-full"></div>
 
+	<!-- Click-away for the filter popover. Must sit OUTSIDE the control stack
+	     below: inside it, this z-10 would outrank the search bar's z-auto within
+	     that container's own stacking context and swallow every click on the
+	     input, the filter button and the toggle. Same z as the stack but earlier
+	     in the DOM, so the controls stay on top and only the map closes it. -->
+	{#if isFilterOpen}
+		<button
+			class="absolute inset-0 z-10 cursor-default"
+			onclick={() => (isFilterOpen = false)}
+			aria-label="Szűrők bezárása"
+		></button>
+	{/if}
+
 	<div class="absolute top-3 left-3 right-16 z-10 flex flex-col gap-2 max-w-xs">
 		<div class="relative">
 			<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -341,21 +447,73 @@
 				value={searchQuery}
 				oninput={(e) => onSearchInput((e.target as HTMLInputElement).value)}
 				placeholder="Keresés (pl. fúrógép)..."
-				class="w-full bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 rounded-full py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+				class="w-full bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 rounded-full py-2.5 pl-10 pr-12 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
 			/>
+			<!-- Filter lives inside the bar's right edge; the category chips that used
+			     to sit under it now live in its popover. -->
+			<button
+				onclick={() => (isFilterOpen = !isFilterOpen)}
+				aria-label="Szűrők"
+				aria-expanded={isFilterOpen}
+				class="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors {activeCategory
+					? 'bg-gray-900 text-white'
+					: 'text-gray-500 hover:bg-gray-100'}"
+			>
+				<SlidersHorizontal class="w-4 h-4" />
+			</button>
 		</div>
-		<div class="flex gap-2 overflow-x-auto pb-1" style="scrollbar-width: none;">
-			{#each CATEGORIES as category}
-				<button
-					onclick={() => toggleCategory(category)}
-					class="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shadow-md transition-colors {activeCategory ===
-					category
-						? 'bg-gray-900 text-white'
-						: 'bg-white/95 backdrop-blur-sm text-gray-600 hover:bg-gray-100 border border-gray-200'}"
-				>
-					{category}
-				</button>
-			{/each}
+
+		{#if isFilterOpen}
+			<div class="absolute top-12 right-0 z-20 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+				<div class="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+					<h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">Kategóriák</h3>
+					{#if activeCategory}
+						<button
+							onclick={() => { activeCategory = ''; syncUrl(); }}
+							class="text-xs font-semibold text-blue-600 hover:underline"
+						>
+							Törlés
+						</button>
+					{/if}
+				</div>
+				<div class="py-1 max-h-64 overflow-y-auto">
+					{#each CATEGORIES as category}
+						<button
+							onclick={() => { toggleCategory(category); isFilterOpen = false; }}
+							class="w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between gap-2 {activeCategory ===
+							category
+								? 'bg-blue-50 text-blue-700 font-semibold'
+								: 'text-gray-700 hover:bg-gray-50'}"
+						>
+							{category}
+							{#if activeCategory === category}
+								<Check class="w-4 h-4 shrink-0" />
+							{/if}
+						</button>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- Hirdetések / Igények: swaps which collection the pins come from. -->
+		<div class="flex bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 rounded-full p-1">
+			<button
+				onclick={() => setTab('LISTINGS')}
+				class="flex-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors {activeTab ===
+				'LISTINGS'
+					? 'bg-blue-600 text-white shadow-sm'
+					: 'text-gray-500 hover:text-gray-700'}"
+			>
+				Hirdetések
+			</button>
+			<button
+				onclick={() => setTab('WANTS')}
+				class="flex-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors {activeTab === 'WANTS'
+					? 'bg-red-600 text-white shadow-sm'
+					: 'text-gray-500 hover:text-gray-700'}"
+			>
+				Igények
+			</button>
 		</div>
 	</div>
 
@@ -380,6 +538,15 @@
 			class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 bg-white shadow-lg border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-600 max-w-xs text-center"
 		>
 			Nincs találat ehhez a szűréshez.
+			<!-- Wants predate having a location, so an empty Igények map is expected
+			     rather than broken - say so instead of leaving it a mystery. -->
+			{#if activeTab === 'WANTS' && data.unplaceableWants > 0}
+				<p class="text-xs text-gray-400 mt-1">
+					{data.unplaceableWants} igényhez nincs megadva hely, ezért nem kerül a térképre.
+					<a href="/feed?tab=wants" class="text-blue-600 font-semibold hover:underline">Listában</a>
+					megnézheted.
+				</p>
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -392,52 +559,86 @@
 	></button>
 	<div class="fixed bottom-4 right-4 z-50 bg-white rounded-3xl shadow-2xl max-h-[70vh] overflow-y-auto w-[calc(100%-2rem)] max-w-sm border border-gray-100">
 		<div class="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between">
-			<div class="flex items-center gap-3">
+			<a
+				href={`/profile/${selectedGroup[0]?.partyId}`}
+				class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
+			>
 				<img
-					src={selectedGroup[0]?.owner.avatar_url}
-					alt={selectedGroup[0]?.owner.name}
-					class="w-9 h-9 rounded-full object-cover bg-gray-100"
+					src={sheetParty?.avatar_url}
+					alt={sheetParty?.name}
+					class="w-9 h-9 rounded-full object-cover bg-gray-100 shrink-0"
 				/>
-				<div>
-					<h3 class="font-semibold text-gray-900 text-sm">{selectedGroup[0]?.owner.name}</h3>
-					<p class="text-xs text-gray-500">{selectedGroup[0]?.owner.location}</p>
+				<div class="min-w-0">
+					<h3 class="font-semibold text-gray-900 text-sm truncate">{sheetParty?.name}</h3>
+					{#if sheetParty?.location}
+						<p class="text-xs text-gray-500 truncate">{sheetParty.location}</p>
+					{/if}
 				</div>
-			</div>
+			</a>
 			<button
 				onclick={closeSheet}
 				aria-label="Bezárás"
-				class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+				class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors shrink-0"
 			>
 				<X class="w-5 h-5" />
 			</button>
 		</div>
 
 		<div class="p-4 space-y-3">
-			{#each selectedGroup as item (item.listing.id)}
+			{#each selectedGroup as entry (entry.id)}
 				<div class="flex gap-3 p-3 bg-gray-50 rounded-xl">
-					<img
-						src={item.listing.image_url}
-						alt={item.listing.title}
-						class="w-16 h-16 rounded-lg object-cover bg-gray-200 flex-shrink-0"
-					/>
+					{#if entry.kind === 'LISTING'}
+						<img
+							src={entry.imageUrl}
+							alt={entry.title}
+							class="w-16 h-16 rounded-lg object-cover bg-gray-200 flex-shrink-0"
+						/>
+					{:else}
+						<!-- Wants have no photo; the date window is the useful thing here. -->
+						<div class="w-16 h-16 rounded-lg bg-red-50 text-red-600 flex flex-col items-center justify-center flex-shrink-0 px-1">
+							<CalendarClock class="w-5 h-5" />
+							<span class="text-[9px] font-bold mt-0.5 text-center leading-tight">
+								{formatShortDate(entry.want?.want.date_from)}
+							</span>
+						</div>
+					{/if}
 					<div class="flex-1 min-w-0">
-						<h4 class="font-semibold text-gray-900 text-sm truncate">{item.listing.title}</h4>
-						<p class="text-xs text-gray-500 line-clamp-2 mt-0.5">{item.listing.description}</p>
-						{#if item.listing.category}
+						<h4 class="font-semibold text-gray-900 text-sm truncate">{entry.title}</h4>
+						<p class="text-xs text-gray-500 line-clamp-2 mt-0.5">{entry.description}</p>
+						{#if entry.kind === 'WANT' && entry.want}
+							<p class="text-xs font-semibold text-red-600 mt-1">
+								{entry.want.want.price_min} – {entry.want.want.price_max} Ft
+							</p>
+						{/if}
+						{#if entry.category}
 							<span
-								class="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full"
+								class="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full {entry.kind ===
+								'WANT'
+									? 'text-red-700 bg-red-50'
+									: 'text-blue-700 bg-blue-50'}"
 							>
-								{item.listing.category}
+								{entry.category}
 							</span>
 						{/if}
 					</div>
-					<button
-						onclick={() => openRequest(item.listing, item.owner)}
-						class="self-center flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5"
-					>
-						<CalendarClock class="w-3.5 h-3.5" />
-						{item.listing.type === 'ITEM' ? 'Borrow' : 'Book'}
-					</button>
+					{#if entry.kind === 'LISTING' && entry.item}
+						<button
+							onclick={() => openRequest(entry.item!.listing, entry.item!.owner)}
+							class="self-center flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5"
+						>
+							<CalendarClock class="w-3.5 h-3.5" />
+							{entry.item.listing.type === 'ITEM' ? 'Borrow' : 'Book'}
+						</button>
+					{:else}
+						<!-- A want isn't bookable - the only sensible action is to talk. -->
+						<button
+							onclick={() => contactWant(entry)}
+							class="self-center flex-shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5"
+						>
+							<MessageCircle class="w-3.5 h-3.5" />
+							Ajánlom
+						</button>
+					{/if}
 				</div>
 			{/each}
 		</div>

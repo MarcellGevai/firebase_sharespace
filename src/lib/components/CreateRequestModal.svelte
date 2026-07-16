@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { X, Search, Tag, Info } from 'lucide-svelte';
+	import { X, Search, Tag, Info, MapPin, House, Loader2 } from 'lucide-svelte';
 	import { createWant } from '$lib/data/wants';
 	import { CATEGORIES } from '$lib/categories';
+	import { searchAddress, geocodeAddress, type AddressSuggestion } from '$lib/geocode';
 
 	let { isOpen = $bindable(false), onSuccess, currentUser }: { isOpen: boolean; onSuccess?: () => void; currentUser?: any } = $props();
 
@@ -14,6 +15,77 @@
 	let description = $state('');
 	let isSubmitting = $state(false);
 	let errorMsg = $state('');
+
+	// Where the request applies. Defaults to the user's home so the common case
+	// ("looking for a drill near me") needs no typing, but stays overridable.
+	// NOTE: mirrors the picker in CreateListingModal; worth extracting into one
+	// shared component once both can be exercised together.
+	let locationMode = $state<'home' | 'custom'>('home');
+	let locationAddress = $state('');
+	let locationLat = $state<number | null>(null);
+	let locationLon = $state<number | null>(null);
+	let addressSuggestions = $state<AddressSuggestion[]>([]);
+	let showSuggestions = $state(false);
+	let suggestionsLoading = $state(false);
+	let suggestDebounce: ReturnType<typeof setTimeout> | undefined;
+	let locationInitialized = false;
+
+	// Seed from the profile once per open; a user with no address on file has
+	// nothing to default to, so they start on the custom field.
+	$effect(() => {
+		if (isOpen && currentUser && !locationInitialized) {
+			locationInitialized = true;
+			if (currentUser.address) {
+				locationMode = 'home';
+				locationAddress = currentUser.address;
+				locationLat = currentUser.latitude ?? null;
+				locationLon = currentUser.longitude ?? null;
+			} else {
+				locationMode = 'custom';
+			}
+		}
+		if (!isOpen) locationInitialized = false;
+	});
+
+	function selectHome() {
+		locationMode = 'home';
+		locationAddress = currentUser?.address || '';
+		locationLat = currentUser?.latitude ?? null;
+		locationLon = currentUser?.longitude ?? null;
+		showSuggestions = false;
+	}
+
+	function selectCustom() {
+		locationMode = 'custom';
+		locationAddress = '';
+		locationLat = null;
+		locationLon = null;
+	}
+
+	function handleLocationInput() {
+		locationLat = null;
+		locationLon = null;
+		if (suggestDebounce) clearTimeout(suggestDebounce);
+		const q = locationAddress;
+		if (q.trim().length < 3) {
+			addressSuggestions = [];
+			showSuggestions = false;
+			return;
+		}
+		suggestDebounce = setTimeout(async () => {
+			suggestionsLoading = true;
+			addressSuggestions = await searchAddress(q).catch(() => []);
+			showSuggestions = addressSuggestions.length > 0;
+			suggestionsLoading = false;
+		}, 300);
+	}
+
+	function pickSuggestion(s: AddressSuggestion) {
+		locationAddress = s.display_name;
+		locationLat = s.lat;
+		locationLon = s.lon;
+		showSuggestions = false;
+	}
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -39,10 +111,31 @@
 			return;
 		}
 
+		if (!locationAddress.trim()) {
+			errorMsg = 'Kérjük, add meg, hol keresed.';
+			return;
+		}
+
 		isSubmitting = true;
 		errorMsg = '';
 
 		try {
+			// Coordinates are what put the pin on the map. Picking a suggestion or
+			// using the home address already supplies them; a typed-over address
+			// still needs resolving.
+			let lat = locationLat;
+			let lon = locationLon;
+			if (lat == null || lon == null) {
+				const coords = await geocodeAddress(locationAddress).catch(() => null);
+				lat = coords?.lat ?? null;
+				lon = coords?.lon ?? null;
+			}
+			if (lat == null || lon == null) {
+				errorMsg = 'Ezt a címet nem sikerült megtalálni – enélkül nem kerül fel a térképre.';
+				isSubmitting = false;
+				return;
+			}
+
 			await createWant(currentUser, {
 				title,
 				description,
@@ -50,7 +143,10 @@
 				date_from: dateFrom,
 				date_to: dateTo,
 				price_min: Number(priceMin),
-				price_max: Number(priceMax)
+				price_max: Number(priceMax),
+				location_address: locationAddress,
+				latitude: lat,
+				longitude: lon
 			});
 
 			// Success
@@ -63,6 +159,9 @@
 			priceMin = '';
 			priceMax = '';
 			description = '';
+			locationAddress = '';
+			locationLat = null;
+			locationLon = null;
 
 			if (onSuccess) onSuccess();
 		} catch (err: any) {
@@ -130,6 +229,70 @@
 								{/each}
 							</select>
 						</div>
+					</div>
+
+					<!-- Location: what puts the request on the map -->
+					<div class="space-y-1.5">
+						<span class="block text-sm font-semibold text-gray-700">Hol keresed? *</span>
+						<div class="grid grid-cols-2 gap-2">
+							<button
+								type="button"
+								onclick={selectHome}
+								disabled={!currentUser?.address}
+								class={`px-2 py-2 rounded-xl border-2 flex items-center justify-center gap-1.5 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${locationMode === 'home' ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}
+							>
+								<House class="w-3.5 h-3.5" />
+								Otthoni címem
+							</button>
+							<button
+								type="button"
+								onclick={selectCustom}
+								class={`px-2 py-2 rounded-xl border-2 flex items-center justify-center gap-1.5 text-xs font-semibold transition-all ${locationMode === 'custom' ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'}`}
+							>
+								<MapPin class="w-3.5 h-3.5" />
+								Egyéni cím
+							</button>
+						</div>
+
+						{#if locationMode === 'custom'}
+							<div class="relative">
+								<input
+									type="text"
+									id="req_location"
+									bind:value={locationAddress}
+									oninput={handleLocationInput}
+									onfocus={() => (showSuggestions = addressSuggestions.length > 0)}
+									onblur={() => setTimeout(() => (showSuggestions = false), 150)}
+									autocomplete="off"
+									class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-all"
+									placeholder="Kezdj el gépelni, pl. Batthyány tér..."
+								/>
+								{#if suggestionsLoading}
+									<Loader2 class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+								{/if}
+								{#if showSuggestions && addressSuggestions.length > 0}
+									<ul class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+										{#each addressSuggestions as s}
+											<li>
+												<button
+													type="button"
+													onmousedown={() => pickSuggestion(s)}
+													class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors"
+												>
+													{s.display_name}
+												</button>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+						{:else}
+							<div class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm flex items-center gap-2 min-h-[42px]">
+								<House class="w-4 h-4 text-gray-400 flex-shrink-0" />
+								<span class="truncate">{locationAddress || 'Nincs cím a profilodban'}</span>
+							</div>
+						{/if}
+						<p class="text-xs text-gray-500">A pin a térképen elmosva jelenik meg – a pontos cím nem látszik.</p>
 					</div>
 
 					<!-- Date Interval -->

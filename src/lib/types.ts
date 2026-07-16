@@ -57,6 +57,11 @@ export type Want = {
 	date_to: string;
 	price_min: number;
 	price_max: number;
+	// Where the requester wants the item/service. Geocoded at creation like a
+	// listing's; wants created before this existed have none and can't be mapped.
+	location_address?: string;
+	latitude?: number | null;
+	longitude?: number | null;
 	requester_name?: string;
 	requester_avatar_url?: string;
 };

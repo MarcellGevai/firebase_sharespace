@@ -11,6 +11,11 @@
 
 	let { currentUser }: { currentUser: User | undefined } = $props();
 
+	// Desktop gets a noticeably bigger hit area than the cramped mobile default.
+	// Shared so the icons can't drift apart as they're edited individually.
+	const navIconClass = 'p-2 md:p-3 rounded-xl transition-colors flex items-center justify-center';
+	const navGlyphClass = 'w-5 h-5 md:w-6 md:h-6';
+
 	async function handleLogout() {
 		await logout();
 		window.location.href = '/';
@@ -98,7 +103,10 @@
 </script>
 
 <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-	<div class="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+	<!-- Wider than the app's max-w-2xl content column from md up: the bar is packed
+	     to the pixel at 2xl (logo + search + actions exactly fill it), so the
+	     roomier desktop icons below need somewhere to come from. -->
+	<div class="max-w-2xl md:max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
 		<!-- Logo -->
 		<a href="/" class="flex items-center gap-2 hover:opacity-90 transition-opacity">
 			<div class="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center">
@@ -176,20 +184,20 @@
 
 		<div class="flex items-center gap-2">
 			<!-- Actions -->
-			<div class="hidden md:flex items-center gap-4">
-			<a href="/feed" class={`p-2 rounded-xl transition-colors ${isActive('/feed') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Hirdetések">
-				<LayoutList class="w-5 h-5" />
+			<div class="hidden md:flex items-center gap-2 lg:gap-3">
+			<a href="/feed" class={`${navIconClass} ${isActive('/feed') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Hirdetések">
+				<LayoutList class={navGlyphClass} />
 			</a>
-			<a href="/" class={`p-2 rounded-xl transition-colors ${isActive('/') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Térkép">
-				<Map class="w-5 h-5" />
+			<a href="/" class={`${navIconClass} ${isActive('/') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Térkép">
+				<Map class={navGlyphClass} />
 			</a>
 			{#if currentUser}
 				<NotificationDropdown />
-				<a href="/rentals" class={`p-2 rounded-xl transition-colors ${isActive('/rentals') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Bérléseim">
-					<Clock class="w-5 h-5" />
+				<a href="/rentals" class={`${navIconClass} ${isActive('/rentals') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Bérléseim">
+					<Clock class={navGlyphClass} />
 				</a>
-				<a href="/inbox" class={`p-2 rounded-xl transition-colors ${isActive('/inbox') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Üzenetek">
-					<MessageCircle class="w-5 h-5" />
+				<a href="/inbox" class={`${navIconClass} ${isActive('/inbox') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}`} aria-label="Üzenetek">
+					<MessageCircle class={navGlyphClass} />
 				</a>
 				<div class="h-8 w-px bg-gray-200 mx-2"></div>
 				<div class="flex items-center gap-3">

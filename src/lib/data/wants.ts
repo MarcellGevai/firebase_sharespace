@@ -13,6 +13,9 @@ export type NewWant = {
 	date_to: string;
 	price_min: number;
 	price_max: number;
+	location_address?: string;
+	latitude?: number | null;
+	longitude?: number | null;
 };
 
 export async function createWant(requester: User, data: NewWant): Promise<string> {
@@ -25,6 +28,9 @@ export async function createWant(requester: User, data: NewWant): Promise<string
 		date_to: data.date_to,
 		price_min: data.price_min,
 		price_max: data.price_max,
+		location_address: data.location_address ?? '',
+		latitude: data.latitude ?? null,
+		longitude: data.longitude ?? null,
 		// Denormalized requester snapshot, same reasoning as listings' owner fields.
 		requester_name: requester.name,
 		requester_avatar_url: requester.avatar_url,

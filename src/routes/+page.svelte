@@ -219,7 +219,7 @@
 			zoom: 12
 		});
 
-		map.addControl(new maplibregl.NavigationControl(), 'bottom-left');
+		map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
 		map.on('load', () => {
 			mapLoaded = true;
 		});
@@ -368,6 +368,12 @@
 <RequestModal isOpen={!!requestListing} listing={requestListing} owner={requestOwner} onClose={closeRequest} />
 
 <style>
+	/* Stack the zoom/compass control above the "My Location" button
+	   (bottom-6 right-4, ~44px) instead of overlapping it. */
+	:global(.maplibregl-ctrl-bottom-right) {
+		margin: 0 16px 84px 0;
+	}
+
 	:global(.self-location-marker) {
 		width: 18px;
 		height: 18px;

@@ -1,12 +1,19 @@
 <script lang="ts">
-	import { Handshake, Undo2, Check, Star } from 'lucide-svelte';
+	import { Handshake, Undo2, Check, Star, Pencil } from 'lucide-svelte';
 	import HandoverModal from './HandoverModal.svelte';
-	import { handoverAction, type HandoverTerms } from '$lib/data/requests';
+	import { handoverAction, updateDealTerms } from '$lib/data/requests';
 
 	let { request, currentUser, otherUser }: { request: any, currentUser: any, otherUser: any } = $props();
 
 	let showHandoverModal = $state(false);
 	let actionInFlight = $state(false);
+
+	let showEditTerms = $state(false);
+	let editStartDate = $state('');
+	let editEndDate = $state('');
+	let editPrice = $state(0);
+	let editSubmitting = $state(false);
+	let editError = $state('');
 
 	// Computed properties for the deal state
 	let isRequester = $derived(request?.requester_id === currentUser.id);
@@ -33,12 +40,11 @@
 			| 'init_return'
 			| 'accept_return'
 			| 'accept_deal'
-			| 'reject_deal',
-		extra: { terms?: HandoverTerms } = {}
+			| 'reject_deal'
 	) {
 		actionInFlight = true;
 		try {
-			await handoverAction(request.id, actionType, extra.terms);
+			await handoverAction(request.id, actionType);
 			window.location.reload();
 		} catch (error) {
 			console.error(error);
@@ -62,10 +68,48 @@
 		}
 	}
 
-	function confirmHandover(terms: HandoverTerms) {
-		handleAction('init_handover', { terms });
+	function confirmHandover() {
+		handleAction('init_handover');
 	}
-	
+
+	function openEditTerms() {
+		showHandoverModal = false;
+		editStartDate = request.start_date;
+		editEndDate = request.end_date;
+		editPrice = Number(request.price_offer) || 0;
+		editError = '';
+		showEditTerms = true;
+	}
+
+	async function saveTerms() {
+		if (!editStartDate || !editEndDate) {
+			editError = 'Kérlek add meg a kezdő és vég dátumot.';
+			return;
+		}
+		if (new Date(editStartDate) > new Date(editEndDate)) {
+			editError = 'A kezdő dátum nem lehet a vég dátum után.';
+			return;
+		}
+		if (editPrice == null || editPrice < 0) {
+			editError = 'Kérlek adj meg egy érvényes árat.';
+			return;
+		}
+		editSubmitting = true;
+		editError = '';
+		try {
+			await updateDealTerms(request.id, {
+				start_date: editStartDate,
+				end_date: editEndDate,
+				price_offer: editPrice
+			});
+			window.location.reload();
+		} catch (error) {
+			console.error(error);
+			editError = 'A módosítás nem sikerült.';
+			editSubmitting = false;
+		}
+	}
+
 	function formatDate(dStr: string) {
 		return new Date(dStr).toLocaleDateString('hu-HU');
 	}
@@ -114,13 +158,24 @@
 					<span class="text-sm text-gray-500 italic">Várakozás a tulajdonosra...</span>
 				{/if}
 			{:else if isAccepted && handoverStatus === 'PENDING'}
-				<button onclick={() => showHandoverModal = true} class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1">
-					<Handshake class="w-4 h-4" /> Csere / Átadás
+				<button onclick={openEditTerms} class="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center gap-1">
+					<Pencil class="w-4 h-4" /> Részletek módosítása
 				</button>
+				{#if !isRequester}
+					<button onclick={() => showHandoverModal = true} class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1">
+						<Handshake class="w-4 h-4" /> Csere / Átadás
+					</button>
+				{:else}
+					<span class="text-sm text-gray-500 italic self-center">Várakozás a tulajdonosra az átadás indításához...</span>
+				{/if}
 			{:else if isHandoverInitiated}
-				<button onclick={() => handleAction('accept_handover')} class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
-					<Check class="w-4 h-4" /> Átadás megerősítése!
-				</button>
+				{#if isRequester}
+					<button onclick={() => handleAction('accept_handover')} class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
+						<Check class="w-4 h-4" /> Átadás megerősítése!
+					</button>
+				{:else}
+					<span class="text-sm text-gray-500 italic self-center">Várakozás a másik fél megerősítésére (5 percen belül)...</span>
+				{/if}
 			{:else if isHandoverCompleted}
 				<button onclick={() => handleAction('init_return')} class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors flex items-center gap-1">
 					<Undo2 class="w-4 h-4" /> Visszaadás indítása
@@ -139,6 +194,59 @@
 				</span>
 			{/if}
 		</div>
+
+		{#if showEditTerms}
+			<div class="border-t border-gray-100 pt-3 space-y-3">
+				<div class="grid grid-cols-2 gap-3">
+					<div class="space-y-1">
+						<label for="edit_start" class="block text-xs font-semibold text-gray-700">Kezdő dátum</label>
+						<input
+							type="date"
+							id="edit_start"
+							bind:value={editStartDate}
+							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+						/>
+					</div>
+					<div class="space-y-1">
+						<label for="edit_end" class="block text-xs font-semibold text-gray-700">Vég dátum</label>
+						<input
+							type="date"
+							id="edit_end"
+							bind:value={editEndDate}
+							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+						/>
+					</div>
+				</div>
+				<div class="space-y-1">
+					<label for="edit_price" class="block text-xs font-semibold text-gray-700">Ár (HUF)</label>
+					<input
+						type="number"
+						id="edit_price"
+						bind:value={editPrice}
+						min="0"
+						class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+					/>
+				</div>
+				{#if editError}
+					<p class="text-sm text-red-600">{editError}</p>
+				{/if}
+				<div class="flex justify-end gap-2">
+					<button
+						onclick={() => (showEditTerms = false)}
+						class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+					>
+						Mégsem
+					</button>
+					<button
+						onclick={saveTerms}
+						disabled={editSubmitting}
+						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+					>
+						{editSubmitting ? 'Mentés...' : 'Mentés'}
+					</button>
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	{#if showHandoverModal}
@@ -147,6 +255,7 @@
 			{otherUser}
 			submitting={actionInFlight}
 			onConfirm={confirmHandover}
+			onModify={openEditTerms}
 			onClose={() => (showHandoverModal = false)}
 		/>
 	{/if}

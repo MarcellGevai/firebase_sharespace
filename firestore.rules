@@ -75,17 +75,27 @@ service cloud.firestore {
 		function initHandover() {
 			return resource.data.status == 'ACCEPTED'
 				&& resource.data.handover_status == 'PENDING'
+				&& uid() == resource.data.owner_id
 				&& request.resource.data.handover_status == 'HANDOVER_INITIATED'
 				&& request.resource.data.handover_initiated_at == request.time;
 		}
 		function acceptHandover() {
 			return resource.data.handover_status == 'HANDOVER_INITIATED'
+				&& uid() == resource.data.requester_id
 				&& request.resource.data.handover_status == 'HANDOVER_COMPLETED'
 				&& request.time < resource.data.handover_initiated_at + duration.value(5, 'm');
 		}
 		function resetHandover() {
 			return resource.data.handover_status == 'HANDOVER_INITIATED'
 				&& request.resource.data.handover_status == 'PENDING';
+		}
+		// Either party may tweak the agreed dates/price, but only before the
+		// handover handshake actually starts.
+		function updateTerms() {
+			return resource.data.status == 'ACCEPTED'
+				&& resource.data.handover_status == 'PENDING'
+				&& request.resource.data.status == resource.data.status
+				&& request.resource.data.handover_status == resource.data.handover_status;
 		}
 		function initReturn() {
 			return resource.data.handover_status == 'HANDOVER_COMPLETED'
@@ -121,7 +131,7 @@ service cloud.firestore {
 				&& request.resource.data.participants == resource.data.participants
 				&& (
 					acceptDeal() || rejectDeal() || initHandover() || acceptHandover() || resetHandover()
-					|| initReturn() || acceptReturn() || resetReturn() || closeDeal()
+					|| updateTerms() || initReturn() || acceptReturn() || resetReturn() || closeDeal()
 				);
 			allow delete: if false;
 		}

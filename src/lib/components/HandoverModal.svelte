@@ -1,47 +1,24 @@
 <script lang="ts">
-	import { X, Handshake, CalendarClock } from 'lucide-svelte';
+	import { X, Handshake, CalendarClock, Pencil } from 'lucide-svelte';
 
 	let {
 		request,
 		otherUser,
 		submitting = false,
 		onConfirm,
+		onModify,
 		onClose
 	}: {
 		request: any;
 		otherUser: any;
 		submitting?: boolean;
-		onConfirm: (terms: { start_date: string; end_date: string; price_offer: number }) => void;
+		onConfirm: () => void;
+		onModify: () => void;
 		onClose: () => void;
 	} = $props();
 
-	function toDateInput(v: any): string {
-		if (!v) return '';
-		const d = new Date(v);
-		if (isNaN(d.getTime())) return '';
-		return d.toISOString().slice(0, 10);
-	}
-
-	let startDate = $state(toDateInput(request?.start_date));
-	let endDate = $state(toDateInput(request?.end_date));
-	let priceOffer = $state<number>(Number(request?.price_offer) || 0);
-	let errorMsg = $state('');
-
-	function confirm() {
-		if (!startDate || !endDate) {
-			errorMsg = 'Kérlek add meg a kezdő és vég dátumot.';
-			return;
-		}
-		if (new Date(startDate) > new Date(endDate)) {
-			errorMsg = 'A kezdő dátum nem lehet a vég dátum után.';
-			return;
-		}
-		if (priceOffer == null || priceOffer < 0) {
-			errorMsg = 'Kérlek adj meg egy érvényes árat.';
-			return;
-		}
-		errorMsg = '';
-		onConfirm({ start_date: startDate, end_date: endDate, price_offer: priceOffer });
+	function formatDate(dStr: string) {
+		return new Date(dStr).toLocaleDateString('hu-HU');
 	}
 </script>
 
@@ -60,46 +37,23 @@
 
 		<!-- Body -->
 		<div class="p-4 space-y-4">
-			<p class="text-sm text-gray-500">
-				Ellenőrizd a bérlés részleteit <span class="font-semibold text-gray-700">{otherUser?.name ?? 'a másik féllel'}</span> között.
-				Ha szükséges, most módosíthatsz rajtuk, majd indítsd el az átadást.
+			<p class="text-sm text-gray-600">
+				Megerősíted az átadást <span class="font-semibold text-gray-900">{otherUser?.name ?? 'a másik féllel'}</span>?
 			</p>
 
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-1.5">
-					<label for="ho_start" class="block text-sm font-semibold text-gray-700">Kezdő dátum</label>
-					<input
-						type="date"
-						id="ho_start"
-						bind:value={startDate}
-						class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-					/>
-				</div>
-				<div class="space-y-1.5">
-					<label for="ho_end" class="block text-sm font-semibold text-gray-700">Vég dátum</label>
-					<input
-						type="date"
-						id="ho_end"
-						bind:value={endDate}
-						class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-					/>
-				</div>
+			<div class="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-700 flex items-center justify-between">
+				<span>{formatDate(request.start_date)} - {formatDate(request.end_date)}</span>
+				<span class="font-semibold">{request.price_offer} Ft</span>
 			</div>
 
-			<div class="space-y-1.5">
-				<label for="ho_price" class="block text-sm font-semibold text-gray-700">Ár (HUF)</label>
-				<input
-					type="number"
-					id="ho_price"
-					bind:value={priceOffer}
-					min="0"
-					class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
-				/>
-			</div>
-
-			{#if errorMsg}
-				<p class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{errorMsg}</p>
-			{/if}
+			<button
+				type="button"
+				onclick={onModify}
+				class="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5"
+			>
+				<Pencil class="w-3.5 h-3.5" />
+				Részletek módosítása
+			</button>
 
 			<div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-700 flex items-start gap-2">
 				<CalendarClock class="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -116,7 +70,7 @@
 				Mégsem
 			</button>
 			<button
-				onclick={confirm}
+				onclick={onConfirm}
 				disabled={submitting}
 				class="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 			>
@@ -125,7 +79,7 @@
 					Indítás...
 				{:else}
 					<Handshake class="w-4 h-4" />
-					Átadás indítása
+					Átadás megerősítése
 				{/if}
 			</button>
 		</div>

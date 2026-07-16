@@ -80,16 +80,22 @@ export type HandoverAction =
 
 export type HandoverTerms = { start_date: string; end_date: string; price_offer: number };
 
+/** Edit the agreed dates/price. Only allowed before the handover handshake starts. */
+export async function updateDealTerms(requestId: string, terms: HandoverTerms): Promise<void> {
+	const ref = doc(db, 'requests', requestId);
+	await updateDoc(ref, {
+		start_date: terms.start_date,
+		end_date: terms.end_date,
+		price_offer: terms.price_offer
+	});
+}
+
 /**
  * Apply one state-machine transition. Each branch writes only the fields the
  * matching security-rule transition allows. Timestamps use serverTimestamp() so
  * the 5-minute window is anchored to trusted server time.
  */
-export async function handoverAction(
-	requestId: string,
-	action: HandoverAction,
-	terms?: HandoverTerms
-): Promise<void> {
+export async function handoverAction(requestId: string, action: HandoverAction): Promise<void> {
 	const ref = doc(db, 'requests', requestId);
 	switch (action) {
 		case 'accept_deal':
@@ -101,10 +107,7 @@ export async function handoverAction(
 		case 'init_handover':
 			await updateDoc(ref, {
 				handover_status: 'HANDOVER_INITIATED' as HandoverStatus,
-				handover_initiated_at: serverTimestamp(),
-				...(terms
-					? { start_date: terms.start_date, end_date: terms.end_date, price_offer: terms.price_offer }
-					: {})
+				handover_initiated_at: serverTimestamp()
 			});
 			return;
 		case 'accept_handover':

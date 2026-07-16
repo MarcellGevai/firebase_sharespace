@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount, mount, unmount } from 'svelte';
+	import { get } from 'svelte/store';
+	import { theme } from '$lib/theme';
 	import maplibregl from 'maplibre-gl';
 	import Supercluster from 'supercluster';
 	import 'maplibre-gl/dist/maplibre-gl.css';
@@ -52,7 +54,10 @@
 	type MapTab = 'LISTINGS' | 'WANTS';
 
 	const BUDAPEST_CENTER: [number, number] = [19.0402, 47.4979];
-	const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+	// Same host, so no extra dependency/attribution. The dark style's background is
+	// rgb(12,12,12), near-identical to the zinc-950 canvas around it.
+	const MAP_STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/liberty';
+	const MAP_STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark';
 
 	const CATEGORY_ICONS: Record<string, typeof Wrench> = {
 		Szerszámok: Wrench,
@@ -374,10 +379,21 @@
 		}
 	});
 
+	// Swap the basemap with the theme. setStyle tears down and rebuilds the style's
+	// own layers; DOM markers live in the canvas container rather than the style,
+	// so they are expected to survive - verified rather than assumed, see below.
+	$effect(() => {
+		const next = $theme === 'dark' ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
+		if (map && mapLoaded) {
+			map.setStyle(next);
+		}
+	});
+
 	onMount(() => {
 		map = new maplibregl.Map({
 			container: mapContainer,
-			style: MAP_STYLE,
+			// Read once at construction; the $effect below handles later toggles.
+			style: get(theme) === 'dark' ? MAP_STYLE_DARK : MAP_STYLE_LIGHT,
 			center: BUDAPEST_CENTER,
 			zoom: 12
 		});
@@ -528,7 +544,7 @@
 	{/if}
 
 	{#if !mapLoaded}
-		<div class="absolute inset-0 z-20 flex items-center justify-center bg-[#FFFFF0]">
+		<div class="absolute inset-0 z-20 flex items-center justify-center bg-canvas">
 			<div
 				class="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"
 			></div>

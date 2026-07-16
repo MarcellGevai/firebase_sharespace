@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Search, Bell, MessageCircle, Menu, X, Map, LayoutList, Clock } from 'lucide-svelte';
+	import { Search, Bell, MessageCircle, Menu, X, Map, LayoutList, Clock, Sun, Moon } from 'lucide-svelte';
+	import { theme, toggleTheme } from '$lib/theme';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { User, Listing } from '$lib/types';
@@ -229,6 +230,25 @@
 				<a href="/login" class="text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors">Log in</a>
 				<a href="/register" class="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl transition-colors">Sign up</a>
 			{/if}
+		</div>
+
+		<!-- Theme toggle. Outside the `hidden md:flex` actions block on purpose: the
+		     theme isn't auth-gated and shouldn't be desktop-only. -->
+		<div class="relative group/nav">
+			<button
+				onclick={toggleTheme}
+				aria-label={$theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+				class="p-2 md:p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center"
+			>
+				{#if $theme === 'dark'}
+					<Sun class={navGlyphClass} />
+				{:else}
+					<Moon class={navGlyphClass} />
+				{/if}
+			</button>
+			<span class={tooltipClass} aria-hidden="true">
+				{$theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+			</span>
 		</div>
 
 		<!-- Category Menu -->

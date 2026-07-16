@@ -4,6 +4,22 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<!--
+			Must run before first paint, and therefore before hydration: otherwise a
+			dark-mode user gets a white flash every navigation. No stored choice means
+			follow the OS; storing one pins it. Kept inline and dependency-free so it
+			can't be delayed by a network fetch.
+		-->
+		<script>
+			try {
+				var t = localStorage.getItem('theme');
+				if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+					document.documentElement.classList.add('dark');
+				}
+			} catch (e) {
+				/* private mode / storage blocked: fall through to light */
+			}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

@@ -27,9 +27,11 @@
 	}
 </script>
 
+<!-- bg-canvas / text-ink are the themed tokens: the variables behind them flip
+     under .dark, so this needs no dark: variant. -->
 <div class={isFullBleed
-	? 'h-screen overflow-hidden flex flex-col bg-[#FFFFF0] font-sans text-gray-900 relative'
-	: 'min-h-screen bg-[#FFFFF0] font-sans text-gray-900 relative'}>
+	? 'h-screen overflow-hidden flex flex-col bg-canvas font-sans text-ink relative'
+	: 'min-h-screen bg-canvas font-sans text-ink relative'}>
 	<Navbar {currentUser} />
 	<main class={isFullBleed ? 'flex-1 min-h-0' : 'max-w-2xl mx-auto px-4 py-6 sm:py-8 pb-24'}>
 		{@render children()}

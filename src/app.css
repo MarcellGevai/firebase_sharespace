@@ -1,6 +1,52 @@
 @import "tailwindcss";
 
 /*
+  Tailwind v4's `dark:` follows prefers-color-scheme out of the box. This switches
+  it to the class strategy so a toggle can override the OS. Without this line
+  `dark:` ignores the .dark class entirely.
+*/
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Semantic surface tokens. Colour utilities compile to `var(--color-*)`, so
+  overriding the variable under .dark flips every use at once - no `dark:` needed
+  on the ~476 places that reference a surface. Reserve `dark:` for the few spots
+  where the two designs genuinely diverge.
+
+  Light: Apple-ish cool grey canvas with white cards lifted off it.
+*/
+@theme {
+	--color-canvas: #f5f5f7;
+	--color-surface: #ffffff;
+	--color-raised: #f5f5f7;
+	--color-line: #e5e7eb;
+	--color-ink: #111827;
+	--color-muted: #6b7280;
+
+	/*
+	  Use as shadow-[var(--shadow-card)], NOT shadow-card: Tailwind inlines the
+	  value into the `shadow-*` utility, so the .dark override below would never
+	  apply. Going through var() keeps the indirection that makes it flip.
+	*/
+	--shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+/*
+  Dark: deep neutral near-black, not pure black. Drop shadows are invisible at
+  this depth, so elevation comes from a light hairline plus a soft black bloom.
+*/
+:root.dark {
+	--color-canvas: #09090b;
+	--color-surface: #18181b;
+	--color-raised: #27272a;
+	--color-line: #27272a;
+	--color-ink: #f4f4f5;
+	--color-muted: #a1a1aa;
+
+	--shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/*
   Tailwind v4 dropped v3's `button { cursor: pointer }` preflight rule, so every
   <button> falls back to the browser default (`cursor: default`) while <a> links
   keep the hand - which is why the link-based nav tabs felt right and every real

@@ -1,9 +1,16 @@
 <script lang="ts">
 	import type { Want } from '$lib/types';
 	import { chatUrl } from '$lib/chat';
-	import { Search, MessageCircle, Calendar } from 'lucide-svelte';
+	import { formatDistance } from '$lib/distance';
+	import { Search, MessageCircle, Calendar, MapPin } from 'lucide-svelte';
 
-	let { want, currentUser }: { want: Want; currentUser?: any } = $props();
+	// null when the want predates carrying a location, or the viewer has no
+	// baseline to measure from.
+	let {
+		want,
+		currentUser,
+		distanceKm = null
+	}: { want: Want; currentUser?: any; distanceKm?: number | null } = $props();
 
 	function handleMessage() {
 		if (!currentUser) {
@@ -48,6 +55,12 @@
 				{formatDate(want.date_from)} - {formatDate(want.date_to)}
 			</span>
 			<span class="font-bold text-red-600">{want.price_min} - {want.price_max} Ft</span>
+			{#if distanceKm != null}
+				<span class="flex items-center gap-1 font-semibold text-blue-600">
+					<MapPin class="w-3.5 h-3.5" />
+					{formatDistance(distanceKm)}
+				</span>
+			{/if}
 		</div>
 
 		<!-- Actions -->

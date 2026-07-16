@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import FeedCard from '$lib/components/FeedCard.svelte';
 	import WantCard from '$lib/components/WantCard.svelte';
 	import type { PageData } from './$types';
 	import { page } from '$app/stores';
 	import { Package, Search } from 'lucide-svelte';
+	import { distanceKmTo, byDistance, type Coords } from '$lib/distance';
 
 	let { data }: { data: PageData } = $props();
 
@@ -13,37 +15,78 @@
 	let activeCategory = $derived($page.url.searchParams.get('category'));
 	let searchQuery = $derived($page.url.searchParams.get('q')?.toLowerCase() ?? '');
 
-	let filteredItems = $derived(data.items.filter((item: any) => {
-		let typeMatch = true;
-		if (activeFilter === 'ITEMS') typeMatch = item.listing.type === 'ITEM';
-		if (activeFilter === 'SERVICES') typeMatch = item.listing.type === 'SERVICE';
+	// Distance baseline: where the user actually is, falling back to the home
+	// address geocoded at registration. GPS is async and may be denied, so the
+	// first paint uses home (or no distances at all) and re-sorts once it lands.
+	let gpsCoords = $state<Coords | null>(null);
+	let homeCoords = $derived<Coords | null>(
+		data.user?.latitude != null && data.user?.longitude != null
+			? { lat: data.user.latitude, lon: data.user.longitude }
+			: null
+	);
+	let baseline = $derived<Coords | null>(gpsCoords ?? homeCoords);
+	// Signed-out users, Google signups (latitude: null) and failed geocodes have
+	// no baseline at all - the feed then keeps its existing order and shows no
+	// distances, rather than inventing them.
+	let hasDistances = $derived(baseline !== null);
 
-		let categoryMatch = true;
-		if (activeCategory) {
-			categoryMatch = item.listing.category === activeCategory;
-		}
+	onMount(() => {
+		if (!('geolocation' in navigator)) return;
+		navigator.geolocation.getCurrentPosition(
+			(pos) => (gpsCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude }),
+			// Denied or unavailable is not an error here: homeCoords already covers it.
+			() => {},
+			{ enableHighAccuracy: false, maximumAge: 300000, timeout: 8000 }
+		);
+	});
 
-		let queryMatch = true;
-		if (searchQuery) {
-			queryMatch = item.listing.title.toLowerCase().includes(searchQuery);
-		}
+	let filteredItems = $derived(
+		data.items
+			.filter((item: any) => {
+				let typeMatch = true;
+				if (activeFilter === 'ITEMS') typeMatch = item.listing.type === 'ITEM';
+				if (activeFilter === 'SERVICES') typeMatch = item.listing.type === 'SERVICE';
 
-		return typeMatch && categoryMatch && queryMatch;
-	}));
+				let categoryMatch = true;
+				if (activeCategory) {
+					categoryMatch = item.listing.category === activeCategory;
+				}
 
-	let filteredWants = $derived(data.wants.filter((want: any) => {
-		let categoryMatch = true;
-		if (activeCategory) {
-			categoryMatch = want.category === activeCategory;
-		}
+				let queryMatch = true;
+				if (searchQuery) {
+					queryMatch = item.listing.title.toLowerCase().includes(searchQuery);
+				}
 
-		let queryMatch = true;
-		if (searchQuery) {
-			queryMatch = want.title.toLowerCase().includes(searchQuery);
-		}
+				return typeMatch && categoryMatch && queryMatch;
+			})
+			.map((item: any) => ({
+				...item,
+				distanceKm: distanceKmTo(baseline, item.listing.latitude, item.listing.longitude)
+			}))
+			.sort(byDistance)
+	);
 
-		return categoryMatch && queryMatch;
-	}));
+	let filteredWants = $derived(
+		data.wants
+			.filter((want: any) => {
+				let categoryMatch = true;
+				if (activeCategory) {
+					categoryMatch = want.category === activeCategory;
+				}
+
+				let queryMatch = true;
+				if (searchQuery) {
+					queryMatch = want.title.toLowerCase().includes(searchQuery);
+				}
+
+				return categoryMatch && queryMatch;
+			})
+			.map((want: any) => ({
+				want,
+				distanceKm: distanceKmTo(baseline, want.latitude, want.longitude)
+			}))
+			.sort(byDistance)
+	);
 
 	function setFilter(filter: string) {
 		activeFilter = filter;
@@ -102,7 +145,12 @@
 				</div>
 			{:else}
 				{#each filteredItems as item (item.listing.id)}
-					<FeedCard listing={item.listing} owner={item.owner} currentUser={data.user} />
+					<FeedCard
+						listing={item.listing}
+						owner={item.owner}
+						currentUser={data.user}
+						distanceKm={item.distanceKm}
+					/>
 				{/each}
 			{/if}
 		</div>
@@ -114,8 +162,8 @@
 					<p>Jelenleg nincs igény ebben a kategóriában.</p>
 				</div>
 			{:else}
-				{#each filteredWants as want (want.id)}
-					<WantCard {want} currentUser={data.user} />
+				{#each filteredWants as row (row.want.id)}
+					<WantCard want={row.want} currentUser={data.user} distanceKm={row.distanceKm} />
 				{/each}
 			{/if}
 		</div>

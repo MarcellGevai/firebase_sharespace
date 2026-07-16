@@ -3,9 +3,17 @@
 	import TrustBadge from './TrustBadge.svelte';
 	import RequestModal from './RequestModal.svelte';
 	import { chatUrl } from '$lib/chat';
+	import { formatDistance } from '$lib/distance';
 	import { MapPin, CalendarClock, MessageCircle } from 'lucide-svelte';
 
-	let { listing, owner, currentUser }: { listing: any; owner: any; currentUser?: any } = $props();
+	// distanceKm is null when either side has no coordinates, or when the viewer
+	// has no baseline (signed out / no home coords) - render nothing then.
+	let {
+		listing,
+		owner,
+		currentUser,
+		distanceKm = null
+	}: { listing: any; owner: any; currentUser?: any; distanceKm?: number | null } = $props();
 
 	let isModalOpen = $state(false);
 
@@ -34,8 +42,16 @@
 			<div>
 				<h3 class="font-semibold text-gray-900 leading-tight">{owner.name}</h3>
 				<div class="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-					<MapPin class="w-3 h-3" />
-					<span>{owner.location}</span>
+					<MapPin class="w-3 h-3 shrink-0" />
+					{#if owner.location}
+						<span>{owner.location}</span>
+					{/if}
+					{#if distanceKm != null}
+						{#if owner.location}
+							<span class="text-gray-300" aria-hidden="true">·</span>
+						{/if}
+						<span class="font-semibold text-blue-600">{formatDistance(distanceKm)}</span>
+					{/if}
 				</div>
 			</div>
 		</a>

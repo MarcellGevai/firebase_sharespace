@@ -29,7 +29,7 @@
 <article class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-300">
 	<!-- Header / Owner Info -->
 	<div class="p-4 flex items-center justify-between">
-		<div class="flex items-center gap-3">
+		<a href={`/profile/${owner.id}`} class="flex items-center gap-3 hover:opacity-80 transition-opacity">
 			<img src={owner.avatar_url} alt={owner.name} class="w-10 h-10 rounded-full object-cover bg-gray-100" />
 			<div>
 				<h3 class="font-semibold text-gray-900 leading-tight">{owner.name}</h3>
@@ -38,7 +38,7 @@
 					<span>{owner.location}</span>
 				</div>
 			</div>
-		</div>
+		</a>
 		<TrustBadge score={owner.trust_score} />
 	</div>
 

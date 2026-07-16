@@ -10,11 +10,13 @@ import {
 	collection,
 	query,
 	where,
+	orderBy,
 	getDocs,
 	serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { updateRatingAggregate } from './users';
+import type { Review } from '../types';
 
 export function reviewId(requestId: string, reviewerId: string): string {
 	return `${requestId}_${reviewerId}`;
@@ -34,6 +36,8 @@ async function countReviews(requestId: string): Promise<number> {
 export type NewReview = {
 	request_id: string;
 	reviewer_id: string;
+	reviewer_name: string;
+	reviewer_avatar_url: string;
 	reviewee_id: string;
 	rating: number;
 	content?: string;
@@ -43,6 +47,8 @@ export async function createReview(r: NewReview): Promise<void> {
 	await setDoc(doc(db, 'reviews', reviewId(r.request_id, r.reviewer_id)), {
 		request_id: r.request_id,
 		reviewer_id: r.reviewer_id,
+		reviewer_name: r.reviewer_name,
+		reviewer_avatar_url: r.reviewer_avatar_url,
 		reviewee_id: r.reviewee_id,
 		rating: r.rating,
 		content: r.content ?? '',
@@ -60,4 +66,15 @@ export async function createReview(r: NewReview): Promise<void> {
 			console.warn('Could not close deal after second review:', e);
 		}
 	}
+}
+
+/** Every review someone has received, newest first, for their public profile. */
+export async function getReviewsForUser(userId: string): Promise<Review[]> {
+	const q = query(
+		collection(db, 'reviews'),
+		where('reviewee_id', '==', userId),
+		orderBy('created_at', 'desc')
+	);
+	const snap = await getDocs(q);
+	return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Review, 'id'>) }));
 }

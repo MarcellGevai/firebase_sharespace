@@ -1,5 +1,5 @@
 // User profiles live in /users/{uid} where uid is the Firebase Auth uid.
-import { doc, getDoc, setDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, runTransaction, serverTimestamp, collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { User } from '../types';
 
@@ -51,6 +51,33 @@ export async function ensureUserProfile(uid: string, data: NewUserProfile): Prom
  * concurrent reviews can't clobber each other. Only the three rating fields are
  * touched, which is exactly what the security rules permit a non-owner to write.
  */
+export type UserSearchResult = { id: string; name: string; avatar_url: string; trust_score: number };
+
+/**
+ * Name search across all users. Firestore has no case-insensitive substring
+ * search, so this reads the collection and filters client-side - fine at
+ * prototype scale. Only ever returns safe, public-facing fields (never
+ * email/address/date_of_birth), regardless of what the underlying docs hold.
+ */
+export async function searchUsers(queryText: string): Promise<UserSearchResult[]> {
+	const q = queryText.trim().toLowerCase();
+	if (!q) return [];
+	const snap = await getDocs(collection(db, 'users'));
+	const results: UserSearchResult[] = [];
+	for (const d of snap.docs) {
+		const data = d.data();
+		if (typeof data.name === 'string' && data.name.toLowerCase().includes(q)) {
+			results.push({
+				id: d.id,
+				name: data.name,
+				avatar_url: data.avatar_url ?? '',
+				trust_score: data.trust_score ?? 0
+			});
+		}
+	}
+	return results.slice(0, 10);
+}
+
 export async function updateRatingAggregate(userId: string, rating: number): Promise<void> {
 	await runTransaction(db, async (tx) => {
 		const ref = doc(db, 'users', userId);

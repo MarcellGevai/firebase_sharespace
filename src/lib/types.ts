@@ -105,5 +105,8 @@ export type Review = {
 	reviewee_id: string;
 	rating: number;
 	content: string;
+	// Denormalized so a profile's review list never needs a /users read per review.
+	reviewer_name?: string;
+	reviewer_avatar_url?: string;
 	created_at?: unknown;
 };

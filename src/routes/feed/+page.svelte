@@ -8,6 +8,7 @@
 	let activeFilter = $state('ALL');
 
 	let activeCategory = $derived($page.url.searchParams.get('category'));
+	let searchQuery = $derived($page.url.searchParams.get('q')?.toLowerCase() ?? '');
 
 	let filteredItems = $derived(data.items.filter((item: any) => {
 		let typeMatch = true;
@@ -19,7 +20,12 @@
 			categoryMatch = item.listing.category === activeCategory;
 		}
 
-		return typeMatch && categoryMatch;
+		let queryMatch = true;
+		if (searchQuery) {
+			queryMatch = item.listing.title.toLowerCase().includes(searchQuery);
+		}
+
+		return typeMatch && categoryMatch && queryMatch;
 	}));
 
 	function setFilter(filter: string) {

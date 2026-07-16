@@ -28,6 +28,8 @@
 			await createReview({
 				request_id: data.request_id,
 				reviewer_id: me.id,
+				reviewer_name: me.name,
+				reviewer_avatar_url: me.avatar_url,
 				reviewee_id: data.reviewee_id,
 				rating,
 				content
@@ -70,13 +72,17 @@
 		{:else if data.reviewee}
 			<div class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm w-full mt-4">
 				<div class="flex flex-col items-center text-center mb-8">
-					<img
-						src={data.reviewee.avatar_url || `https://i.pravatar.cc/150?u=${data.reviewee.id}`}
-						alt={data.reviewee.name}
-						class="w-20 h-20 rounded-full object-cover shadow-sm mb-4 bg-gray-100"
-					/>
+					<a href={`/profile/${data.reviewee.id}`}>
+						<img
+							src={data.reviewee.avatar_url || `https://i.pravatar.cc/150?u=${data.reviewee.id}`}
+							alt={data.reviewee.name}
+							class="w-20 h-20 rounded-full object-cover shadow-sm mb-4 bg-gray-100 hover:opacity-80 transition-opacity"
+						/>
+					</a>
 					<h2 class="text-xl font-bold text-gray-900">Hogyan ment a bérlés?</h2>
-					<p class="text-sm text-gray-500 mt-1">Értékeld {data.reviewee.name} felhasználót a "{data.listing_title}" kapcsán.</p>
+					<p class="text-sm text-gray-500 mt-1">
+						Értékeld <a href={`/profile/${data.reviewee.id}`} class="font-semibold text-gray-700 hover:text-blue-600 transition-colors">{data.reviewee.name}</a> felhasználót a "{data.listing_title}" kapcsán.
+					</p>
 				</div>
 
 				<form onsubmit={handleSubmit} class="space-y-6 flex flex-col items-center">

@@ -25,6 +25,7 @@ import {
 	setProfileLocation
 } from './data/users';
 import { syncOwnerLocationToListings } from './data/listings';
+import { isUsernameAvailable, claimUsername, UsernameTakenError } from './data/usernames';
 import type { User } from './types';
 
 export const currentUser = writable<User | null>(null);
@@ -136,6 +137,7 @@ export async function updateAccountEmail(newEmail: string, currentPassword: stri
 
 export type RegisterInput = {
 	name: string;
+	username: string;
 	email: string;
 	password: string;
 	address: string;
@@ -144,14 +146,32 @@ export type RegisterInput = {
 };
 
 export async function register(input: RegisterInput): Promise<void> {
+	// Claiming a username needs an authenticated caller, so the account has to
+	// exist first - but a handle taken in the meantime must not leave a signed-up
+	// user with no username. The pre-check catches the ordinary case cheaply; the
+	// rollback below covers the race the pre-check can't.
+	if (!(await isUsernameAvailable(input.username))) {
+		throw new UsernameTakenError(input.username);
+	}
+
 	const cred = await createUserWithEmailAndPassword(auth, input.email, input.password);
 	const uid = cred.user.uid;
+
+	try {
+		await claimUsername(uid, input.username);
+	} catch (e) {
+		// Lost the race. Undo the half-made account rather than stranding an
+		// unusable one on the email address - they can retry with another handle.
+		await cred.user.delete().catch(() => {});
+		throw e;
+	}
 
 	// Best-effort geocode; registration must still succeed if Nominatim fails.
 	const coords = await geocodeAddress(input.address).catch(() => null);
 
 	await createUserProfile(uid, {
 		name: input.name,
+		username: input.username.trim(),
 		email: input.email,
 		avatar_url: avatarUrl(input.gender, uid),
 		// `location` is the public face of the account - it is denormalized onto
@@ -165,7 +185,9 @@ export async function register(input: RegisterInput): Promise<void> {
 		longitude: coords?.lon ?? null
 	});
 
-	await updateProfile(cred.user, { displayName: input.name }).catch(() => {});
+	// displayName is the public handle, not the legal name: it surfaces in
+	// places outside our own rendering (e.g. the Firebase console, emails).
+	await updateProfile(cred.user, { displayName: input.username.trim() }).catch(() => {});
 	await sendEmailVerification(cred.user).catch(() => {});
 	await refreshProfile();
 }

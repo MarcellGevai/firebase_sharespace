@@ -1,9 +1,19 @@
 // "Wants" (Igények) live in /wants/{autoId} - the inverse of a listing: someone
 // posting that they're looking for an item/service, rather than offering one.
 // A separate collection from /requests (the deal/handover state machine).
-import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import {
+	collection,
+	addDoc,
+	getDocs,
+	query,
+	where,
+	orderBy,
+	serverTimestamp,
+	writeBatch
+} from 'firebase/firestore';
 import { db } from '../firebase';
 import { createdMs } from '../timestamps';
+import { displayName } from '../username';
 import type { User, Want } from '../types';
 
 export type NewWant = {
@@ -33,7 +43,8 @@ export async function createWant(requester: User, data: NewWant): Promise<string
 		latitude: data.latitude ?? null,
 		longitude: data.longitude ?? null,
 		// Denormalized requester snapshot, same reasoning as listings' owner fields.
-		requester_name: requester.name,
+		// The public handle, never the legal name: anyone can read a want.
+		requester_name: displayName(requester),
 		requester_avatar_url: requester.avatar_url,
 		created_at: serverTimestamp()
 	});
@@ -44,6 +55,22 @@ export async function getAvailableWants(): Promise<Want[]> {
 	const q = query(collection(db, 'wants'), orderBy('created_at', 'desc'));
 	const snap = await getDocs(q);
 	return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Want, 'id'>) }));
+}
+
+/**
+ * Refresh the requester's handle on their own wants after a rename. /wants
+ * carries a snapshot of it and is world-readable, so without this the old
+ * handle stays on show. Best-effort, like the listings equivalent.
+ */
+export async function syncRequesterNameToWants(requesterId: string, name: string): Promise<number> {
+	const snap = await getDocs(query(collection(db, 'wants'), where('requester_id', '==', requesterId)));
+	const stale = snap.docs.filter((d) => d.data().requester_name !== name);
+	if (stale.length === 0) return 0;
+
+	const batch = writeBatch(db);
+	for (const d of stale) batch.update(d.ref, { requester_name: name });
+	await batch.commit();
+	return stale.length;
 }
 
 /**

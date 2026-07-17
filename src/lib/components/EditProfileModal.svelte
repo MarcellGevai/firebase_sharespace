@@ -3,7 +3,10 @@
 	import { X, MapPin, TriangleAlert } from 'lucide-svelte';
 	import { geocodeAddress } from '$lib/geocode';
 	import { updateUserProfile } from '$lib/data/users';
-	import { syncOwnerLocationToListings } from '$lib/data/listings';
+	import { syncOwnerLocationToListings, syncOwnerNameToListings } from '$lib/data/listings';
+	import { syncRequesterNameToWants } from '$lib/data/wants';
+	import { changeUsername } from '$lib/data/usernames';
+	import { validateUsername, displayName } from '$lib/username';
 	import { updateAccountEmail, hasPasswordProvider, refreshProfile, authErrorMessage } from '$lib/auth';
 	import type { User } from '$lib/types';
 
@@ -17,6 +20,7 @@
 	// `profile` mid-edit would wipe what the user is typing. The parent only
 	// mounts this while it's open, so every open starts from a fresh profile.
 	let name = $state(untrack(() => profile.name ?? ''));
+	let username = $state(untrack(() => profile.username ?? ''));
 	let email = $state(untrack(() => profile.email ?? ''));
 	let address = $state(untrack(() => profile.address ?? ''));
 	let dateOfBirth = $state(untrack(() => profile.date_of_birth ?? ''));
@@ -29,6 +33,7 @@
 
 	const canChangeEmail = hasPasswordProvider();
 	let emailChanged = $derived(canChangeEmail && email.trim() !== (profile.email ?? '').trim());
+	let usernameChanged = $derived(username.trim() !== (profile.username ?? '').trim());
 
 	async function save() {
 		if (!name.trim()) {
@@ -37,6 +42,11 @@
 		}
 		if (!address.trim()) {
 			error = 'A lakcím nem lehet üres.';
+			return;
+		}
+		const usernameError = validateUsername(username);
+		if (usernameError) {
+			error = usernameError;
 			return;
 		}
 		if (emailChanged && !currentPassword) {
@@ -63,6 +73,13 @@
 		}
 
 		try {
+			// Reserved before the profile doc is touched: if the handle is taken,
+			// the save must fail whole rather than leave the doc claiming a name
+			// this user doesn't hold.
+			if (usernameChanged) {
+				await changeUsername(profile.id, profile.username, username.trim());
+			}
+
 			// The login address is changed via Firebase Auth, not by writing the
 			// profile doc - and only after the user clicks the link sent to the new
 			// address, so the /users copy is deliberately left alone here.
@@ -74,6 +91,7 @@
 			const nextLocation = coords ? coords.locality : (profile.location ?? '');
 			await updateUserProfile(profile.id, {
 				name: name.trim(),
+				username: username.trim(),
 				address: address.trim(),
 				location: nextLocation,
 				date_of_birth: dateOfBirth,
@@ -88,6 +106,21 @@
 				await syncOwnerLocationToListings(profile.id, nextLocation).catch((e) =>
 					console.error('owner_location sync failed', e)
 				);
+			}
+
+			// Listings and wants both snapshot the owner's handle, and both are
+			// world-readable - a rename that skipped this would leave the old handle
+			// on show across the feed. Best-effort, same as the locality sync.
+			if (usernameChanged) {
+				const shown = displayName({ username: username.trim(), name: name.trim() });
+				await Promise.all([
+					syncOwnerNameToListings(profile.id, shown).catch((e) =>
+						console.error('owner_name sync failed', e)
+					),
+					syncRequesterNameToWants(profile.id, shown).catch((e) =>
+						console.error('requester_name sync failed', e)
+					)
+				]);
 			}
 
 			await refreshProfile();
@@ -128,13 +161,29 @@
 
 		<div class="p-4 space-y-4">
 			<div class="space-y-1">
-				<label for="ep_name" class="block text-sm font-semibold text-gray-700">Név</label>
+				<label for="ep_name" class="block text-sm font-semibold text-gray-700">Teljes név</label>
 				<input
 					id="ep_name"
 					type="text"
 					bind:value={name}
 					class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
 				/>
+				<p class="text-xs text-gray-400">Csak te látod.</p>
+			</div>
+
+			<div class="space-y-1">
+				<label for="ep_username" class="block text-sm font-semibold text-gray-700">Felhasználónév *</label>
+				<div class="relative">
+					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">@</span>
+					<input
+						id="ep_username"
+						type="text"
+						bind:value={username}
+						autocomplete="username"
+						class="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+					/>
+				</div>
+				<p class="text-xs text-gray-400">Ez jelenik meg a nyilvános profilodon.</p>
 			</div>
 
 			<div class="space-y-1">

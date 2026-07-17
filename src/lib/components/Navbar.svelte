@@ -5,6 +5,7 @@
 	import { page } from '$app/stores';
 	import type { User, Listing } from '$lib/types';
 	import { CATEGORIES } from '$lib/categories';
+	import { displayName } from '$lib/username';
 	import NotificationDropdown from './NotificationDropdown.svelte';
 	import { logout } from '$lib/auth';
 	import { getAvailableListings } from '$lib/data/listings';
@@ -218,9 +219,9 @@
 				<div class="h-8 w-px bg-gray-200 mx-2"></div>
 				<div class="flex items-center gap-3">
 					<a href={`/profile/${currentUser.id}`} class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-						<img src={currentUser.avatar_url} alt={currentUser.name} class="w-9 h-9 rounded-full ring-2 ring-gray-100 object-cover" />
+						<img src={currentUser.avatar_url} alt={displayName(currentUser)} class="w-9 h-9 rounded-full ring-2 ring-gray-100 object-cover" />
 						<div class="text-sm">
-							<p class="font-semibold text-gray-900">{currentUser.name}</p>
+							<p class="font-semibold text-gray-900">{displayName(currentUser)}</p>
 							<p class="text-gray-500 text-xs text-left">⭐️ {currentUser.trust_score}</p>
 						</div>
 					</a>
@@ -297,8 +298,8 @@
 	<div class="md:hidden border-t border-gray-100 px-4 py-3 flex items-center justify-between bg-white">
 		{#if currentUser}
 			<a href={`/profile/${currentUser.id}`} class="flex items-center gap-3">
-				<img src={currentUser.avatar_url} alt={currentUser.name} class="w-8 h-8 rounded-full object-cover" />
-				<span class="text-sm font-semibold text-gray-900">{currentUser.name}</span>
+				<img src={currentUser.avatar_url} alt={displayName(currentUser)} class="w-8 h-8 rounded-full object-cover" />
+				<span class="text-sm font-semibold text-gray-900">{displayName(currentUser)}</span>
 			</a>
 			<div class="flex items-center gap-3">
 				<a href="/feed" class={`p-1.5 rounded-lg transition-colors ${isActive('/feed') ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} aria-label="Hirdetések">

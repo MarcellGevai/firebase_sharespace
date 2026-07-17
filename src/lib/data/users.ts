@@ -10,10 +10,12 @@ import {
 	getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { displayName } from '../username';
 import type { User } from '../types';
 
 export type NewUserProfile = {
 	name: string;
+	username?: string;
 	email: string;
 	avatar_url: string;
 	location: string;
@@ -57,6 +59,7 @@ export async function ensureUserProfile(uid: string, data: NewUserProfile): Prom
 
 export type EditableProfile = {
 	name: string;
+	username?: string;
 	address: string;
 	location: string;
 	date_of_birth?: string;
@@ -107,10 +110,15 @@ export async function searchUsers(queryText: string): Promise<UserSearchResult[]
 	const results: UserSearchResult[] = [];
 	for (const d of snap.docs) {
 		const data = d.data();
-		if (typeof data.name === 'string' && data.name.toLowerCase().includes(q)) {
+		// Matched on the public handle, never the legal name: searching the private
+		// field would let anyone confirm a full name by brute force, and the hit
+		// would render it. Legacy accounts have no username, and displayName falls
+		// back to their name - which is what they already showed publicly.
+		const shown = displayName(data as { username?: string; name?: string });
+		if (shown.toLowerCase().includes(q)) {
 			results.push({
 				id: d.id,
-				name: data.name,
+				name: shown,
 				avatar_url: data.avatar_url ?? '',
 				trust_score: data.trust_score ?? 0
 			});

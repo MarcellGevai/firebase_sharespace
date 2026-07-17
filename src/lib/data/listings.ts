@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { createdMs } from '../timestamps';
+import { displayName } from '../username';
 import type { Listing, ListingType } from '../types';
 import type { User } from '../types';
 
@@ -59,8 +60,9 @@ export async function createListing(owner: User, data: NewListing): Promise<stri
 		availability_type: data.availability_type ?? null,
 		available_from: data.available_from ?? null,
 		available_until: data.available_until ?? null,
-		// Denormalized owner snapshot.
-		owner_name: owner.name,
+		// Denormalized owner snapshot. The public handle, never the legal name:
+		// anyone can read a listing.
+		owner_name: displayName(owner),
 		owner_avatar_url: owner.avatar_url,
 		owner_location: owner.location,
 		owner_trust_score: owner.trust_score ?? 0,
@@ -91,6 +93,24 @@ export async function syncOwnerLocationToListings(
 
 	const batch = writeBatch(db);
 	for (const d of stale) batch.update(d.ref, { owner_location: location });
+	await batch.commit();
+	return stale.length;
+}
+
+/**
+ * Same idea for the owner's public handle: /listings carries a snapshot of it,
+ * so renaming without this leaves the old handle on show across the feed.
+ *
+ * Best-effort like its sibling above - a failure must not fail the profile save,
+ * but the listings then keep the old name until the next attempt.
+ */
+export async function syncOwnerNameToListings(ownerId: string, name: string): Promise<number> {
+	const snap = await getDocs(query(collection(db, 'listings'), where('owner_id', '==', ownerId)));
+	const stale = snap.docs.filter((d) => d.data().owner_name !== name);
+	if (stale.length === 0) return 0;
+
+	const batch = writeBatch(db);
+	for (const d of stale) batch.update(d.ref, { owner_name: name });
 	await batch.commit();
 	return stale.length;
 }

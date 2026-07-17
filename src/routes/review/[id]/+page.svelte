@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { currentUser } from '$lib/auth';
 	import { createReview } from '$lib/data/reviews';
+	import { displayName } from '$lib/username';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -28,7 +29,7 @@
 			await createReview({
 				request_id: data.request_id,
 				reviewer_id: me.id,
-				reviewer_name: me.name,
+				reviewer_name: displayName(me),
 				reviewer_avatar_url: me.avatar_url,
 				reviewee_id: data.reviewee_id,
 				rating,

@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { UserPlus, Mail, CheckCircle2 } from 'lucide-svelte';
 	import { register, loginWithGoogle, authErrorMessage } from '$lib/auth';
+	import { validateUsername } from '$lib/username';
 
 	let name = $state('');
+	let username = $state('');
 	let email = $state('');
 	let password = $state('');
 	let address = $state('');
@@ -42,8 +44,16 @@
 
 	async function handleRegister(e: Event) {
 		e.preventDefault();
-		if (!name || !email || !password || !address || !date_of_birth || !gender) {
+		if (!name || !username || !email || !password || !address || !date_of_birth || !gender) {
 			errorMsg = 'Kérjük, tölts ki minden kötelező mezőt!';
+			return;
+		}
+
+		// Surfaced before the network round-trip, so a malformed handle doesn't
+		// cost an account-creation attempt to find out.
+		const usernameError = validateUsername(username);
+		if (usernameError) {
+			errorMsg = usernameError;
 			return;
 		}
 
@@ -56,7 +66,7 @@
 		errorMsg = '';
 
 		try {
-			await register({ name, email, password, address, date_of_birth, gender });
+			await register({ name, username, email, password, address, date_of_birth, gender });
 			registrationSuccess = true;
 		} catch (err) {
 			errorMsg = authErrorMessage(err);
@@ -110,7 +120,23 @@
 		<form onsubmit={handleRegister} class="space-y-4">
 			<div class="space-y-1.5">
 				<label for="name" class="block text-sm font-semibold text-gray-700">Teljes Név *</label>
-				<input type="text" id="name" bind:value={name} class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all" placeholder="Pl. Kiss Minta" />
+				<input type="text" id="name" bind:value={name} class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all" />
+				<p class="text-xs text-gray-400">Csak te látod – nyilvánosan a felhasználóneved jelenik meg.</p>
+			</div>
+
+			<div class="space-y-1.5">
+				<label for="username" class="block text-sm font-semibold text-gray-700">Felhasználónév *</label>
+				<div class="relative">
+					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">@</span>
+					<input
+						type="text"
+						id="username"
+						bind:value={username}
+						autocomplete="username"
+						class="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+					/>
+				</div>
+				<p class="text-xs text-gray-400">Ez jelenik meg a nyilvános profilodon.</p>
 			</div>
 
 			<div class="space-y-1.5">

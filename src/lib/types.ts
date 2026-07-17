@@ -2,7 +2,17 @@
 
 export type User = {
 	id: string;
+	/**
+	 * Legal/full name. Private: collected at registration but never shown to
+	 * strangers - `username` is the public identity. Treat it like `address`.
+	 */
 	name: string;
+	/**
+	 * Public handle, unique across the app (see /usernames and username.ts).
+	 * Optional only because accounts predating it have none; use displayName()
+	 * rather than reading this directly, so those accounts still render.
+	 */
+	username?: string;
 	avatar_url: string;
 	location: string;
 	trust_score: number;

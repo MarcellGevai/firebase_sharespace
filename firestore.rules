@@ -35,14 +35,54 @@ service cloud.firestore {
 			return !request.resource.data.diff(resource.data).affectedKeys().hasAny(ratingFields());
 		}
 		match /users/{userId} {
+			// A username on the profile doc must be backed by a reservation this user
+			// actually holds in /usernames. Without this the reservation would be
+			// decoration: /users lets its owner write any non-rating field, so anyone
+			// using the SDK directly could set a handle they never claimed - and it
+			// is /users.username, not the reservation, that the app renders.
+			function usernameIsClaimed() {
+				return !('username' in request.resource.data)
+					|| request.resource.data.username == ''
+					|| (
+						exists(/databases/$(database)/documents/usernames/$(request.resource.data.username.lower()))
+						&& get(/databases/$(database)/documents/usernames/$(request.resource.data.username.lower())).data.uid == userId
+					);
+			}
+			// request.resource.data is the whole post-write doc, not a diff, so an
+			// unchanged username would otherwise re-run the lookup above on every
+			// write - including a reviewer's rating update, which is not their doc.
+			function usernameUnchanged() {
+				return request.resource.data.get('username', '') == resource.data.get('username', '');
+			}
 			allow read: if signedIn();
 			allow create: if signedIn() && userId == uid()
 				&& request.resource.data.trust_score == 0
-				&& request.resource.data.review_count == 0;
+				&& request.resource.data.review_count == 0
+				&& usernameIsClaimed();
 			allow update: if signedIn() && (
-				(userId == uid() && noRatingChanged()) || onlyRatingChanged()
+				(userId == uid() && noRatingChanged() && (usernameUnchanged() || usernameIsClaimed()))
+				|| onlyRatingChanged()
 			);
 			allow delete: if false;
+		}
+
+		// ---- USERNAMES ----
+		// /usernames/{key} -> { uid }: the reservation that makes handles unique.
+		// Firestore has no unique index, so THIS is the enforcement, not the client
+		// transaction that writes it: `create` only applies when the doc does not
+		// exist, and `update` is refused outright. Two people racing for the same
+		// handle therefore cannot both win - the second write is an update, denied.
+		//
+		// Readable signed-out because the register form checks availability before
+		// the account exists. That exposes nothing: usernames are displayed
+		// publicly, and the uid they map to is already the public /profile/{uid}.
+		match /usernames/{key} {
+			allow read: if true;
+			allow create: if signedIn() && request.resource.data.uid == uid()
+				&& request.resource.data.keys().hasOnly(['uid']);
+			allow update: if false;
+			// Releasing your own handle, e.g. when changing it.
+			allow delete: if signedIn() && resource.data.uid == uid();
 		}
 
 		// ---- LISTINGS ----

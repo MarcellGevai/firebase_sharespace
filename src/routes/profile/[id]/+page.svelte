@@ -13,6 +13,7 @@
 	import RequestModal from '$lib/components/RequestModal.svelte';
 	import WantCard from '$lib/components/WantCard.svelte';
 	import CollapsibleSection from '$lib/components/CollapsibleSection.svelte';
+	import { displayName } from '$lib/username';
 	import type { User, Review, Listing, Want } from '$lib/types';
 
 	let loading = $state(true);
@@ -79,7 +80,7 @@
 </script>
 
 <svelte:head>
-	<title>{profile?.name ?? 'Profil'} - Sharespace</title>
+	<title>{profile ? displayName(profile) : 'Profil'} - Sharespace</title>
 </svelte:head>
 
 
@@ -102,8 +103,12 @@
 			{/if}
 
 			<div class="flex flex-col items-center text-center">
-				<img src={profile.avatar_url} alt={profile.name} class="w-24 h-24 rounded-full object-cover bg-gray-100 mb-4" />
-				<h1 class="text-2xl font-bold text-gray-900">{profile.name}</h1>
+				<img src={profile.avatar_url} alt={displayName(profile)} class="w-24 h-24 rounded-full object-cover bg-gray-100 mb-4" />
+				<h1 class="text-2xl font-bold text-gray-900">{displayName(profile)}</h1>
+				<!-- Owner-only, like the address below: the legal name is not public. -->
+				{#if isOwnProfile && profile.name}
+					<p class="text-sm text-gray-400 mt-0.5">{profile.name}</p>
+				{/if}
 				{#if profile.location}
 					<p class="text-sm text-gray-500 mt-1">{profile.location}</p>
 				{/if}

@@ -113,30 +113,30 @@
 {#snippet rentalRow(row: RentalRow, status: Snippet)}
 	<a
 		href={chatUrl(row.request.listing_id, row.isOwner ? row.request.requester_id : row.request.owner_id)}
-		class="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+		class="flex items-center gap-4 p-4 hover:bg-raised transition-colors"
 	>
 		<img
 			src={row.listingImage}
 			alt={row.listingTitle}
-			class="w-14 h-14 rounded-xl object-cover bg-gray-100 flex-shrink-0"
+			class="w-14 h-14 rounded-xl object-cover bg-raised flex-shrink-0"
 		/>
 		<div class="flex-1 min-w-0">
-			<p class="font-semibold text-gray-900 truncate">{row.listingTitle}</p>
-			<p class="text-xs text-gray-500">
+			<p class="font-semibold text-ink truncate">{row.listingTitle}</p>
+			<p class="text-xs text-muted">
 				{row.isOwner ? 'Bérbe adva neki:' : 'Bérelve tőle:'} {row.otherUserName}
 			</p>
 			{@render status()}
 		</div>
-		<ArrowRight class="w-4 h-4 text-gray-300 flex-shrink-0" />
+		<ArrowRight class="w-4 h-4 text-faint flex-shrink-0" />
 	</a>
 {/snippet}
 
 <div class="max-w-2xl mx-auto space-y-8">
-	<h1 class="text-2xl font-bold text-gray-900">Bérléseim</h1>
+	<h1 class="text-2xl font-bold text-ink">Bérléseim</h1>
 
 	{#if loading}
 		<div class="flex justify-center py-12">
-			<div class="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+			<div class="w-8 h-8 border-4 border-line border-t-primary rounded-full animate-spin"></div>
 		</div>
 	{:else}
 		<div class="space-y-3">
@@ -144,23 +144,23 @@
 				label="Aktív bérlések"
 				count={activeRentals.length}
 				icon={Clock}
-				iconClass="text-green-600"
+				iconClass="text-primary"
 				bind:open={openActive}
 			>
 				{#if activeRentals.length === 0}
-					<p class="text-sm text-gray-500 p-4">Jelenleg nincs aktív bérlésed.</p>
+					<p class="text-sm text-muted p-4">Jelenleg nincs aktív bérlésed.</p>
 				{:else}
-					<ul class="divide-y divide-gray-100">
+					<ul class="divide-y divide-line">
 						{#each activeRentals as row (row.request.id)}
 							{@const startMs = tsToMs(row.request.actual_rental_start)}
 							<li>
 								{#snippet activeStatus()}
 									{#if row.request.handover_status === 'RETURN_INITIATED'}
-										<p class="text-xs font-semibold text-purple-600 mt-1">Visszaadás folyamatban...</p>
+										<p class="text-xs font-semibold text-progress mt-1">Visszaadás folyamatban...</p>
 									{:else if startMs}
-										<p class="text-sm font-bold text-green-600 mt-1">{formatDuration(now - startMs)} eltelt</p>
+										<p class="text-sm font-bold text-primary mt-1">{formatDuration(now - startMs)} eltelt</p>
 									{:else}
-										<p class="text-xs text-gray-400 mt-1">Kezdés ideje ismeretlen</p>
+										<p class="text-xs text-faint mt-1">Kezdés ideje ismeretlen</p>
 									{/if}
 								{/snippet}
 								{@render rentalRow(row, activeStatus)}
@@ -174,24 +174,24 @@
 				label="Lezárt bérlések"
 				count={completedRentals.length}
 				icon={CheckCircle2}
-				iconClass="text-gray-400"
+				iconClass="text-faint"
 				bind:open={openCompleted}
 			>
 				{#if completedRentals.length === 0}
-					<p class="text-sm text-gray-500 p-4">Még nincs lezárt bérlésed.</p>
+					<p class="text-sm text-muted p-4">Még nincs lezárt bérlésed.</p>
 				{:else}
-					<ul class="divide-y divide-gray-100">
+					<ul class="divide-y divide-line">
 						{#each completedRentals as row (row.request.id)}
 							{@const startMs = tsToMs(row.request.actual_rental_start)}
 							{@const endMs = tsToMs(row.request.actual_rental_end)}
 							<li>
 								{#snippet completedStatus()}
 									{#if startMs && endMs}
-										<p class="text-sm font-bold text-gray-600 mt-1">
+										<p class="text-sm font-bold text-muted mt-1">
 											Teljes időtartam: {formatDuration(endMs - startMs)}
 										</p>
 									{:else}
-										<p class="text-xs text-gray-400 mt-1">Időtartam ismeretlen</p>
+										<p class="text-xs text-faint mt-1">Időtartam ismeretlen</p>
 									{/if}
 								{/snippet}
 								{@render rentalRow(row, completedStatus)}

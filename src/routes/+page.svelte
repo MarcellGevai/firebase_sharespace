@@ -78,8 +78,25 @@
 	};
 
 	const DEFAULT_COLOR = '#64748b';
-	// Matches the red "Igény" FAB, so want pins/clusters read as the same thing.
-	const WANT_COLOR = '#dc2626';
+
+	/**
+	 * Read a theme token as a plain colour string.
+	 *
+	 * The pins are drawn into markers whose colour MapLibre wants as a value, not
+	 * a `var()` it could resolve itself - so unlike everything else in the app,
+	 * these can't simply reference the token and let the cascade flip them.
+	 */
+	function themeColor(name: string, fallback: string): string {
+		if (typeof window === 'undefined') return fallback;
+		return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+	}
+
+	// Matches the coral "Igény" FAB, so want pins/clusters read as the same thing.
+	// Re-read on every theme flip: the token behind it changes value.
+	let WANT_COLOR = $derived.by(() => {
+		$theme;
+		return themeColor('--color-want', '#d1385a');
+	});
 
 	// Cluster radius in px; past CLUSTER_MAX_ZOOM every pin stands on its own.
 	const CLUSTER_RADIUS = 60;
@@ -457,13 +474,13 @@
 
 	<div class="absolute top-3 left-3 right-16 z-10 flex flex-col gap-2 max-w-xs">
 		<div class="relative">
-			<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+			<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-faint pointer-events-none" />
 			<input
 				type="text"
 				value={searchQuery}
 				oninput={(e) => onSearchInput((e.target as HTMLInputElement).value)}
 				placeholder="Keresés (pl. fúrógép)..."
-				class="w-full bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 rounded-full py-2.5 pl-10 pr-12 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+				class="w-full bg-surface/95 backdrop-blur-sm shadow-md border border-line rounded-full py-2.5 pl-10 pr-12 text-sm text-ink placeholder:text-faint outline-none focus:ring-2 focus:ring-primary transition-all"
 			/>
 			<!-- Filter lives inside the bar's right edge; the category chips that used
 			     to sit under it now live in its popover. -->
@@ -472,21 +489,21 @@
 				aria-label="Szűrők"
 				aria-expanded={isFilterOpen}
 				class="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors {activeCategory
-					? 'bg-gray-900 text-white'
-					: 'text-gray-500 hover:bg-gray-100'}"
+					? 'bg-primary text-primary-fg'
+					: 'text-muted hover:bg-raised'}"
 			>
 				<SlidersHorizontal class="w-4 h-4" />
 			</button>
 		</div>
 
 		{#if isFilterOpen}
-			<div class="absolute top-12 right-0 z-20 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-				<div class="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-					<h3 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">Kategóriák</h3>
+			<div class="absolute top-12 right-0 z-20 w-56 bg-surface rounded-2xl shadow-xl border border-line overflow-hidden">
+				<div class="px-3 py-2 bg-raised border-b border-line flex items-center justify-between">
+					<h3 class="text-xs font-semibold text-ink uppercase tracking-wide">Kategóriák</h3>
 					{#if activeCategory}
 						<button
 							onclick={() => { activeCategory = ''; syncUrl(); }}
-							class="text-xs font-semibold text-blue-600 hover:underline"
+							class="text-xs font-semibold text-primary hover:underline"
 						>
 							Törlés
 						</button>
@@ -498,8 +515,8 @@
 							onclick={() => { toggleCategory(category); isFilterOpen = false; }}
 							class="w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between gap-2 {activeCategory ===
 							category
-								? 'bg-blue-50 text-blue-700 font-semibold'
-								: 'text-gray-700 hover:bg-gray-50'}"
+								? 'bg-primary-soft text-primary font-semibold'
+								: 'text-ink hover:bg-raised'}"
 						>
 							{category}
 							{#if activeCategory === category}
@@ -512,21 +529,21 @@
 		{/if}
 
 		<!-- Hirdetések / Igények: swaps which collection the pins come from. -->
-		<div class="flex bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 rounded-full p-1">
+		<div class="flex bg-surface/95 backdrop-blur-sm shadow-md border border-line rounded-full p-1">
 			<button
 				onclick={() => setTab('LISTINGS')}
 				class="flex-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors {activeTab ===
 				'LISTINGS'
-					? 'bg-blue-600 text-white shadow-sm'
-					: 'text-gray-500 hover:text-gray-700'}"
+					? 'bg-primary text-primary-fg shadow-sm'
+					: 'text-muted hover:text-ink'}"
 			>
 				Hirdetések
 			</button>
 			<button
 				onclick={() => setTab('WANTS')}
 				class="flex-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors {activeTab === 'WANTS'
-					? 'bg-red-600 text-white shadow-sm'
-					: 'text-gray-500 hover:text-gray-700'}"
+					? 'bg-want text-want-fg shadow-sm'
+					: 'text-muted hover:text-ink'}"
 			>
 				Igények
 			</button>
@@ -537,7 +554,7 @@
 		<button
 			onclick={recenterOnSelf}
 			aria-label="Ugrás a jelenlegi helyemre"
-			class="absolute bottom-6 right-4 z-10 bg-white hover:bg-gray-50 text-blue-600 p-3 rounded-full shadow-lg border border-gray-100 transition-colors"
+			class="absolute bottom-6 right-4 z-10 bg-surface hover:bg-raised text-primary p-3 rounded-full shadow-lg border border-line transition-colors"
 		>
 			<LocateFixed class="w-5 h-5" />
 		</button>
@@ -546,20 +563,20 @@
 	{#if !mapLoaded}
 		<div class="absolute inset-0 z-20 flex items-center justify-center bg-canvas">
 			<div
-				class="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"
+				class="w-8 h-8 border-4 border-line border-t-primary rounded-full animate-spin"
 			></div>
 		</div>
 	{:else if groups.length === 0}
 		<div
-			class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 bg-white shadow-lg border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-600 max-w-xs text-center"
+			class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 bg-surface shadow-lg border border-line rounded-xl px-4 py-3 text-sm text-muted max-w-xs text-center"
 		>
 			Nincs találat ehhez a szűréshez.
 			<!-- Wants predate having a location, so an empty Igények map is expected
 			     rather than broken - say so instead of leaving it a mystery. -->
 			{#if activeTab === 'WANTS' && data.unplaceableWants > 0}
-				<p class="text-xs text-gray-400 mt-1">
+				<p class="text-xs text-faint mt-1">
 					{data.unplaceableWants} igényhez nincs megadva hely, ezért nem kerül a térképre.
-					<a href="/feed?tab=wants" class="text-blue-600 font-semibold hover:underline">Listában</a>
+					<a href="/feed?tab=wants" class="text-primary font-semibold hover:underline">Listában</a>
 					megnézheted.
 				</p>
 			{/if}
@@ -569,12 +586,12 @@
 
 {#if isSheetOpen}
 	<button
-		class="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm cursor-default"
+		class="fixed inset-0 z-40 bg-scrim backdrop-blur-sm cursor-default"
 		onclick={closeSheet}
 		aria-label="Bezárás"
 	></button>
-	<div class="fixed bottom-4 right-4 z-50 bg-white rounded-3xl shadow-2xl max-h-[70vh] overflow-y-auto w-[calc(100%-2rem)] max-w-sm border border-gray-100">
-		<div class="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between">
+	<div class="fixed bottom-4 right-4 z-50 bg-surface rounded-3xl shadow-2xl max-h-[70vh] overflow-y-auto w-[calc(100%-2rem)] max-w-sm border border-line">
+		<div class="sticky top-0 bg-surface border-b border-line p-4 flex items-center justify-between">
 			<a
 				href={`/profile/${selectedGroup[0]?.partyId}`}
 				class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
@@ -582,19 +599,19 @@
 				<img
 					src={sheetParty?.avatar_url}
 					alt={sheetParty?.name}
-					class="w-9 h-9 rounded-full object-cover bg-gray-100 shrink-0"
+					class="w-9 h-9 rounded-full object-cover bg-raised shrink-0"
 				/>
 				<div class="min-w-0">
-					<h3 class="font-semibold text-gray-900 text-sm truncate">{sheetParty?.name}</h3>
+					<h3 class="font-semibold text-ink text-sm truncate">{sheetParty?.name}</h3>
 					{#if sheetParty?.location}
-						<p class="text-xs text-gray-500 truncate">{sheetParty.location}</p>
+						<p class="text-xs text-muted truncate">{sheetParty.location}</p>
 					{/if}
 				</div>
 			</a>
 			<button
 				onclick={closeSheet}
 				aria-label="Bezárás"
-				class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors shrink-0"
+				class="p-2 text-faint hover:text-muted hover:bg-raised rounded-full transition-colors shrink-0"
 			>
 				<X class="w-5 h-5" />
 			</button>
@@ -602,16 +619,16 @@
 
 		<div class="p-4 space-y-3">
 			{#each selectedGroup as entry (entry.id)}
-				<div class="flex gap-3 p-3 bg-gray-50 rounded-xl">
+				<div class="flex gap-3 p-3 bg-raised rounded-xl">
 					{#if entry.kind === 'LISTING'}
 						<img
 							src={entry.imageUrl}
 							alt={entry.title}
-							class="w-16 h-16 rounded-lg object-cover bg-gray-200 flex-shrink-0"
+							class="w-16 h-16 rounded-lg object-cover bg-raised flex-shrink-0"
 						/>
 					{:else}
 						<!-- Wants have no photo; the date window is the useful thing here. -->
-						<div class="w-16 h-16 rounded-lg bg-red-50 text-red-600 flex flex-col items-center justify-center flex-shrink-0 px-1">
+						<div class="w-16 h-16 rounded-lg bg-want-soft text-want flex flex-col items-center justify-center flex-shrink-0 px-1">
 							<CalendarClock class="w-5 h-5" />
 							<span class="text-[9px] font-bold mt-0.5 text-center leading-tight">
 								{formatShortDate(entry.want?.want.date_from)}
@@ -619,10 +636,10 @@
 						</div>
 					{/if}
 					<div class="flex-1 min-w-0">
-						<h4 class="font-semibold text-gray-900 text-sm truncate">{entry.title}</h4>
-						<p class="text-xs text-gray-500 line-clamp-2 mt-0.5">{entry.description}</p>
+						<h4 class="font-semibold text-ink text-sm truncate">{entry.title}</h4>
+						<p class="text-xs text-muted line-clamp-2 mt-0.5">{entry.description}</p>
 						{#if entry.kind === 'WANT' && entry.want}
-							<p class="text-xs font-semibold text-red-600 mt-1">
+							<p class="text-xs font-semibold text-want mt-1">
 								{entry.want.want.price_min} – {entry.want.want.price_max} Ft
 							</p>
 						{/if}
@@ -630,8 +647,8 @@
 							<span
 								class="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full {entry.kind ===
 								'WANT'
-									? 'text-red-700 bg-red-50'
-									: 'text-blue-700 bg-blue-50'}"
+									? 'text-want bg-want-soft'
+									: 'text-primary bg-primary-soft'}"
 							>
 								{entry.category}
 							</span>
@@ -640,7 +657,7 @@
 					{#if entry.kind === 'LISTING' && entry.item}
 						<button
 							onclick={() => openRequest(entry.item!.listing, entry.item!.owner)}
-							class="self-center flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5"
+							class="self-center flex-shrink-0 bg-primary hover:bg-primary-hover text-primary-fg text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5"
 						>
 							<CalendarClock class="w-3.5 h-3.5" />
 							{entry.item.listing.type === 'ITEM' ? 'Borrow' : 'Book'}
@@ -649,7 +666,7 @@
 						<!-- A want isn't bookable - the only sensible action is to talk. -->
 						<button
 							onclick={() => contactWant(entry)}
-							class="self-center flex-shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5"
+							class="self-center flex-shrink-0 bg-want hover:bg-want-hover text-want-fg text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5"
 						>
 							<MessageCircle class="w-3.5 h-3.5" />
 							Ajánlom
@@ -670,13 +687,36 @@
 		margin: 0 16px 84px 0;
 	}
 
+	/* MapLibre ships its own light chrome, which stays a white slab on the dark
+	   map. Its stylesheet is global and outside our token system, so these are
+	   the one place we have to reach in and repaint someone else's component. */
+	:global(.maplibregl-ctrl-attrib) {
+		background: var(--color-surface) !important;
+		color: var(--color-muted);
+	}
+	:global(.maplibregl-ctrl-attrib a) {
+		color: var(--color-muted);
+	}
+	:global(.maplibregl-ctrl-group) {
+		background: var(--color-surface);
+		border: 1px solid var(--color-line);
+	}
+	:global(.maplibregl-ctrl-group button + button) {
+		border-top-color: var(--color-line);
+	}
+	/* The control glyphs are background-image SVGs baked black; invert them on
+	   dark so they don't vanish into the button they sit on. */
+	:global(.dark .maplibregl-ctrl-group button .maplibregl-ctrl-icon) {
+		filter: invert(1);
+	}
+
 	:global(.self-location-marker) {
 		width: 18px;
 		height: 18px;
 		border-radius: 50%;
-		background: #3b82f6;
-		border: 3px solid white;
-		box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+		background: var(--color-primary);
+		border: 3px solid var(--color-surface);
+		box-shadow: 0 0 0 2px var(--color-primary-line);
 		/* Absolute for the same reason as .listing-marker above. */
 		position: absolute;
 	}
@@ -726,7 +766,7 @@
 		/* Absolute for the same reason as .listing-marker above. */
 		position: absolute;
 		border-radius: 50%;
-		background: #2563eb;
+		background: var(--color-primary);
 		color: white;
 		font-family: inherit;
 		font-weight: 700;

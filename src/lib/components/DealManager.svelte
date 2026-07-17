@@ -175,21 +175,21 @@
 </script>
 
 {#if request}
-	<div class="bg-white border-b border-gray-100 p-4 shrink-0 flex flex-col gap-3 shadow-sm z-10">
+	<div class="bg-surface border-b border-line p-4 shrink-0 flex flex-col gap-3 shadow-sm z-10">
 		<div class="flex items-center justify-between">
 			<div>
-				<h3 class="font-bold text-gray-900 flex items-center gap-2">
-					<Handshake class="w-5 h-5 text-blue-600" />
+				<h3 class="font-bold text-ink flex items-center gap-2">
+					<Handshake class="w-5 h-5 text-primary" />
 					Bérlési tranzakció
 				</h3>
-				<p class="text-sm text-gray-500">
+				<p class="text-sm text-muted">
 					{formatDate(request.start_date)} - {formatDate(request.end_date)}
 				</p>
 			</div>
 			<div class="text-right">
-				<span class="block text-lg font-bold text-blue-600">{request.price_offer} Ft</span>
+				<span class="block text-lg font-bold text-primary">{request.price_offer} Ft</span>
 				<span class="text-xs font-semibold px-2 py-1 rounded-full
-					{isRejected ? 'bg-red-100 text-red-700' : isClosed ? 'bg-gray-100 text-gray-600' : (isHandoverCompleted && !isReturnCompleted ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')}">
+					{isRejected ? 'bg-want-soft text-want' : isClosed ? 'bg-raised text-muted' : (isHandoverCompleted && !isReturnCompleted ? 'bg-primary-soft text-primary' : 'bg-primary-soft text-primary')}">
 					{#if isRejected}Elutasítva
 					{:else if isClosed}Lezárva
 					{:else if isReturnCompleted}Visszaadva, Értékelésre vár
@@ -204,50 +204,50 @@
 
 		<div class="flex gap-2 justify-end mt-2">
 			{#if isRejected}
-				<span class="text-sm text-gray-500 italic">Az ajánlatot elutasították.</span>
+				<span class="text-sm text-muted italic">Az ajánlatot elutasították.</span>
 			{:else if isPending}
 				{#if isMyTurn}
-					<button onclick={() => handleAction('reject_deal')} class="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
+					<button onclick={() => handleAction('reject_deal')} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors">
 						Visszautasít
 					</button>
-					<button onclick={openModifyOffer} class="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center gap-1">
+					<button onclick={openModifyOffer} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors flex items-center gap-1">
 						<Pencil class="w-4 h-4" /> Ajánlat módosítása
 					</button>
-					<button onclick={() => handleAction('accept_deal')} class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">
+					<button onclick={() => handleAction('accept_deal')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors">
 						Ajánlat Elfogadása
 					</button>
 				{:else}
-					<span class="text-sm text-gray-500 italic">Várakozás a másik fél válaszára...</span>
+					<span class="text-sm text-muted italic">Várakozás a másik fél válaszára...</span>
 				{/if}
 			{:else if isAccepted && handoverStatus === 'PENDING'}
-				<button onclick={openEditTerms} class="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center gap-1">
+				<button onclick={openEditTerms} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors flex items-center gap-1">
 					<Pencil class="w-4 h-4" /> Részletek módosítása
 				</button>
 				{#if !isRequester}
-					<button onclick={() => showHandoverModal = true} class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1">
+					<button onclick={() => showHandoverModal = true} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1">
 						<Handshake class="w-4 h-4" /> Csere / Átadás
 					</button>
 				{:else}
-					<span class="text-sm text-gray-500 italic self-center">Várakozás a tulajdonosra az átadás indításához...</span>
+					<span class="text-sm text-muted italic self-center">Várakozás a tulajdonosra az átadás indításához...</span>
 				{/if}
 			{:else if isHandoverInitiated}
 				{#if isRequester}
-					<button onclick={() => handleAction('accept_handover')} class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
+					<button onclick={() => handleAction('accept_handover')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
 						<Check class="w-4 h-4" /> Átadás megerősítése!
 					</button>
 				{:else}
-					<span class="text-sm text-gray-500 italic self-center">Várakozás a másik fél megerősítésére (5 percen belül)...</span>
+					<span class="text-sm text-muted italic self-center">Várakozás a másik fél megerősítésére (5 percen belül)...</span>
 				{/if}
 			{:else if isHandoverCompleted}
 				{#if isRequester}
-					<button onclick={() => handleAction('init_return')} class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors flex items-center gap-1">
+					<button onclick={() => handleAction('init_return')} class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-progress transition-colors flex items-center gap-1">
 						<Undo2 class="w-4 h-4" /> Visszaadás indítása
 					</button>
 				{:else}
-					<span class="text-sm text-gray-500 italic self-center">Bérlés alatt - a bérlő indítja a visszaadást.</span>
+					<span class="text-sm text-muted italic self-center">Bérlés alatt - a bérlő indítja a visszaadást.</span>
 				{/if}
 			{:else if isReturnInitiated}
-				<button onclick={() => handleAction('accept_return')} class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
+				<button onclick={() => handleAction('accept_return')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
 					<Check class="w-4 h-4" /> Visszaadás megerősítése!
 				</button>
 			{:else if needsReview}
@@ -255,62 +255,62 @@
 					<Star class="w-4 h-4" /> Értékelés leadása
 				</a>
 			{:else if hasReviewed && !isClosed}
-				<span class="text-sm text-gray-500 italic flex items-center gap-1">
-					<Check class="w-4 h-4 text-green-600" /> Értékelésed leadva – várakozás a másik félre...
+				<span class="text-sm text-muted italic flex items-center gap-1">
+					<Check class="w-4 h-4 text-primary" /> Értékelésed leadva – várakozás a másik félre...
 				</span>
 			{/if}
 		</div>
 
 		{#if showEditTerms}
-			<div class="border-t border-gray-100 pt-3 space-y-3">
-				<p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 flex items-start gap-1.5">
+			<div class="border-t border-line pt-3 space-y-3">
+				<p class="text-xs text-warn bg-warn-soft border border-warn rounded-lg px-3 py-2 flex items-start gap-1.5">
 					<Pencil class="w-3.5 h-3.5 mt-0.5 shrink-0" />
 					<span>A módosítást a másik félnek újra el kell fogadnia, és az átadás csak ezután indítható.</span>
 				</p>
 				<div class="grid grid-cols-2 gap-3">
 					<div class="space-y-1">
-						<label for="edit_start" class="block text-xs font-semibold text-gray-700">Kezdő dátum</label>
+						<label for="edit_start" class="block text-xs font-semibold text-ink">Kezdő dátum</label>
 						<input
 							type="date"
 							id="edit_start"
 							bind:value={editStartDate}
-							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="w-full px-3 py-2 bg-surface border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
 						/>
 					</div>
 					<div class="space-y-1">
-						<label for="edit_end" class="block text-xs font-semibold text-gray-700">Vég dátum</label>
+						<label for="edit_end" class="block text-xs font-semibold text-ink">Vég dátum</label>
 						<input
 							type="date"
 							id="edit_end"
 							bind:value={editEndDate}
-							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="w-full px-3 py-2 bg-surface border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
 						/>
 					</div>
 				</div>
 				<div class="space-y-1">
-					<label for="edit_price" class="block text-xs font-semibold text-gray-700">Ár (HUF)</label>
+					<label for="edit_price" class="block text-xs font-semibold text-ink">Ár (HUF)</label>
 					<input
 						type="number"
 						id="edit_price"
 						bind:value={editPrice}
 						min="0"
-						class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+						class="w-full px-3 py-2 bg-surface border border-line rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
 					/>
 				</div>
 				{#if editError}
-					<p class="text-sm text-red-600">{editError}</p>
+					<p class="text-sm text-want">{editError}</p>
 				{/if}
 				<div class="flex justify-end gap-2">
 					<button
 						onclick={() => (showEditTerms = false)}
-						class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+						class="px-4 py-2 text-sm font-semibold text-muted hover:bg-raised rounded-lg transition-colors"
 					>
 						Mégsem
 					</button>
 					<button
 						onclick={saveTerms}
 						disabled={editSubmitting}
-						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+						class="px-4 py-2 bg-primary hover:bg-primary-hover text-primary-fg rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
 					>
 						{editSubmitting ? 'Mentés...' : 'Mentés'}
 					</button>
@@ -319,54 +319,54 @@
 		{/if}
 
 		{#if showModifyOffer}
-			<div class="border-t border-gray-100 pt-3 space-y-3">
-				<p class="text-xs text-gray-500 flex items-center gap-1">
+			<div class="border-t border-line pt-3 space-y-3">
+				<p class="text-xs text-muted flex items-center gap-1">
 					<Pencil class="w-3.5 h-3.5" /> Új ajánlat küldése - a másik félnek kell rá válaszolnia.
 				</p>
 				<div class="grid grid-cols-2 gap-3">
 					<div class="space-y-1">
-						<label for="mod_start" class="block text-xs font-semibold text-gray-700">Kezdő dátum</label>
+						<label for="mod_start" class="block text-xs font-semibold text-ink">Kezdő dátum</label>
 						<input
 							type="date"
 							id="mod_start"
 							bind:value={modifyStartDate}
-							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="w-full px-3 py-2 bg-surface border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
 						/>
 					</div>
 					<div class="space-y-1">
-						<label for="mod_end" class="block text-xs font-semibold text-gray-700">Vég dátum</label>
+						<label for="mod_end" class="block text-xs font-semibold text-ink">Vég dátum</label>
 						<input
 							type="date"
 							id="mod_end"
 							bind:value={modifyEndDate}
-							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="w-full px-3 py-2 bg-surface border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
 						/>
 					</div>
 				</div>
 				<div class="space-y-1">
-					<label for="mod_price" class="block text-xs font-semibold text-gray-700">Ár (HUF)</label>
+					<label for="mod_price" class="block text-xs font-semibold text-ink">Ár (HUF)</label>
 					<input
 						type="number"
 						id="mod_price"
 						bind:value={modifyPrice}
 						min="0"
-						class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+						class="w-full px-3 py-2 bg-surface border border-line rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
 					/>
 				</div>
 				{#if modifyError}
-					<p class="text-sm text-red-600">{modifyError}</p>
+					<p class="text-sm text-want">{modifyError}</p>
 				{/if}
 				<div class="flex justify-end gap-2">
 					<button
 						onclick={() => (showModifyOffer = false)}
-						class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+						class="px-4 py-2 text-sm font-semibold text-muted hover:bg-raised rounded-lg transition-colors"
 					>
 						Mégsem
 					</button>
 					<button
 						onclick={submitModifyOffer}
 						disabled={modifySubmitting}
-						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+						class="px-4 py-2 bg-primary hover:bg-primary-hover text-primary-fg rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
 					>
 						{modifySubmitting ? 'Küldés...' : 'Ajánlat küldése'}
 					</button>

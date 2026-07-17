@@ -22,26 +22,26 @@
 	}
 </script>
 
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-	<div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" role="dialog" aria-modal="true">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm">
+	<div class="bg-surface rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" role="dialog" aria-modal="true">
 		<!-- Header -->
-		<div class="flex items-center justify-between p-4 border-b border-gray-100">
-			<h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-				<Handshake class="w-5 h-5 text-blue-600" />
+		<div class="flex items-center justify-between p-4 border-b border-line">
+			<h2 class="text-lg font-bold text-ink flex items-center gap-2">
+				<Handshake class="w-5 h-5 text-primary" />
 				Csere megerősítése
 			</h2>
-			<button onclick={onClose} aria-label="Bezárás" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+			<button onclick={onClose} aria-label="Bezárás" class="p-2 text-faint hover:text-muted hover:bg-raised rounded-full transition-colors">
 				<X class="w-5 h-5" />
 			</button>
 		</div>
 
 		<!-- Body -->
 		<div class="p-4 space-y-4">
-			<p class="text-sm text-gray-600">
-				Megerősíted az átadást <span class="font-semibold text-gray-900">{otherUser?.name ?? 'a másik féllel'}</span>?
+			<p class="text-sm text-muted">
+				Megerősíted az átadást <span class="font-semibold text-ink">{otherUser?.name ?? 'a másik féllel'}</span>?
 			</p>
 
-			<div class="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-700 flex items-center justify-between">
+			<div class="bg-raised border border-line rounded-lg p-3 text-sm text-ink flex items-center justify-between">
 				<span>{formatDate(request.start_date)} - {formatDate(request.end_date)}</span>
 				<span class="font-semibold">{request.price_offer} Ft</span>
 			</div>
@@ -49,30 +49,30 @@
 			<button
 				type="button"
 				onclick={onModify}
-				class="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5"
+				class="text-sm font-semibold text-primary hover:text-primary flex items-center gap-1.5"
 			>
 				<Pencil class="w-3.5 h-3.5" />
 				Részletek módosítása
 			</button>
 
-			<div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-700 flex items-start gap-2">
+			<div class="bg-primary-soft border border-primary-line rounded-lg p-3 text-xs text-primary flex items-start gap-2">
 				<CalendarClock class="w-4 h-4 mt-0.5 flex-shrink-0" />
 				Az átadás indítása után a másik félnek <strong>5 percen belül</strong> meg kell erősítenie, hogy a csere zöld jelzést kapjon.
 			</div>
 		</div>
 
 		<!-- Footer -->
-		<div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+		<div class="p-4 bg-raised border-t border-line flex justify-end gap-3">
 			<button
 				onclick={onClose}
-				class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors"
+				class="px-5 py-2.5 text-sm font-semibold text-muted hover:bg-raised rounded-xl transition-colors"
 			>
 				Mégsem
 			</button>
 			<button
 				onclick={onConfirm}
 				disabled={submitting}
-				class="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+				class="px-5 py-2.5 text-sm font-semibold text-primary-fg bg-primary hover:bg-primary-hover rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 			>
 				{#if submitting}
 					<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

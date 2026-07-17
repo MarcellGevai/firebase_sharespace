@@ -87,44 +87,44 @@
 <div class="max-w-2xl mx-auto">
 	{#if loading}
 		<div class="flex justify-center py-12">
-			<div class="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+			<div class="w-8 h-8 border-4 border-line border-t-primary rounded-full animate-spin"></div>
 		</div>
 	{:else if notFound}
-		<div class="text-center p-8 text-gray-500">Ez a felhasználó nem található.</div>
+		<div class="text-center p-8 text-muted">Ez a felhasználó nem található.</div>
 	{:else if profile}
-		<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 relative">
+		<div class="bg-surface rounded-2xl border border-line shadow-sm p-6 relative">
 			{#if isOwnProfile}
 				<button
 					onclick={() => (isEditOpen = true)}
-					class="absolute top-4 right-4 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+					class="absolute top-4 right-4 px-3 py-1.5 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors flex items-center gap-1.5"
 				>
 					<Pencil class="w-4 h-4" /> Szerkesztés
 				</button>
 			{/if}
 
 			<div class="flex flex-col items-center text-center">
-				<img src={profile.avatar_url} alt={displayName(profile)} class="w-24 h-24 rounded-full object-cover bg-gray-100 mb-4" />
-				<h1 class="text-2xl font-bold text-gray-900">{displayName(profile)}</h1>
+				<img src={profile.avatar_url} alt={displayName(profile)} class="w-24 h-24 rounded-full object-cover bg-raised mb-4" />
+				<h1 class="text-2xl font-bold text-ink">{displayName(profile)}</h1>
 				<!-- Owner-only, like the address below: the legal name is not public. -->
 				{#if isOwnProfile && profile.name}
-					<p class="text-sm text-gray-400 mt-0.5">{profile.name}</p>
+					<p class="text-sm text-faint mt-0.5">{profile.name}</p>
 				{/if}
 				{#if profile.location}
-					<p class="text-sm text-gray-500 mt-1">{profile.location}</p>
+					<p class="text-sm text-muted mt-1">{profile.location}</p>
 				{/if}
-				<div class="flex items-center gap-1.5 mt-3 text-yellow-500 font-semibold">
-					<Star class="w-5 h-5 fill-yellow-400 text-yellow-400" />
+				<div class="flex items-center gap-1.5 mt-3 text-star-ink font-semibold">
+					<Star class="w-5 h-5 fill-star text-star" />
 					{profile.trust_score ?? 0}
-					<span class="text-gray-400 font-normal text-sm">({profile.review_count ?? 0} értékelés)</span>
+					<span class="text-faint font-normal text-sm">({profile.review_count ?? 0} értékelés)</span>
 				</div>
 
 				<!-- Owner-only. The precise address must never render on a public view. -->
 				{#if isOwnProfile && profile.address}
-					<div class="mt-4 w-full border-t border-gray-100 pt-4 flex items-start gap-2 text-left">
-						<Home class="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+					<div class="mt-4 w-full border-t border-line pt-4 flex items-start gap-2 text-left">
+						<Home class="w-4 h-4 text-faint mt-0.5 shrink-0" />
 						<div class="min-w-0">
-							<p class="text-sm text-gray-700 break-words">{profile.address}</p>
-							<p class="text-xs text-gray-400 mt-0.5">Csak te látod – másoknak csak a település jelenik meg.</p>
+							<p class="text-sm text-ink break-words">{profile.address}</p>
+							<p class="text-xs text-faint mt-0.5">Csak te látod – másoknak csak a település jelenik meg.</p>
 						</div>
 					</div>
 				{/if}
@@ -134,11 +134,11 @@
 		<div class="mt-6 space-y-3">
 			<CollapsibleSection label="Értékelések" count={reviews.length} icon={Star} bind:open={open.reviews}>
 				{#if reviews.length === 0}
-					<p class="text-sm text-gray-500 p-4">Még nincs értékelése.</p>
+					<p class="text-sm text-muted p-4">Még nincs értékelése.</p>
 				{:else}
 					<!-- Divided rows rather than nested cards: these already sit inside
 					     the section's own white card. -->
-					<ul class="divide-y divide-gray-100">
+					<ul class="divide-y divide-line">
 						{#each reviews as review (review.id)}
 							<li class="p-4">
 								<div class="flex items-center justify-between gap-3">
@@ -149,19 +149,19 @@
 										<img
 											src={review.reviewer_avatar_url}
 											alt={review.reviewer_name}
-											class="w-9 h-9 rounded-full object-cover bg-gray-100 flex-shrink-0"
+											class="w-9 h-9 rounded-full object-cover bg-raised flex-shrink-0"
 										/>
-										<span class="font-semibold text-gray-900 truncate">{review.reviewer_name}</span>
+										<span class="font-semibold text-ink truncate">{review.reviewer_name}</span>
 									</a>
-									<span class="text-xs text-gray-400 whitespace-nowrap">{formatDate(review.created_at)}</span>
+									<span class="text-xs text-faint whitespace-nowrap">{formatDate(review.created_at)}</span>
 								</div>
 								<div class="flex gap-0.5 mt-2">
 									{#each Array(5) as _, i}
-										<Star class="w-4 h-4 {i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}" />
+										<Star class="w-4 h-4 {i < review.rating ? 'fill-star text-star' : 'text-faint'}" />
 									{/each}
 								</div>
 								{#if review.content}
-									<p class="text-sm text-gray-600 mt-2">{review.content}</p>
+									<p class="text-sm text-muted mt-2">{review.content}</p>
 								{/if}
 							</li>
 						{/each}
@@ -179,7 +179,7 @@
 			>
 				<div class="p-4">
 						{#if listings.length === 0}
-							<p class="text-sm text-gray-500">
+							<p class="text-sm text-muted">
 								{isOwnProfile ? 'Még nincs aktív hirdetésed.' : 'Jelenleg nincs aktív hirdetése.'}
 							</p>
 						{:else}
@@ -194,11 +194,11 @@
 										this={isOwnProfile ? 'div' : 'button'}
 										role={isOwnProfile ? undefined : 'button'}
 										onclick={isOwnProfile ? undefined : () => (requestListing = listing)}
-										class="text-left bg-white rounded-2xl border border-gray-100 overflow-hidden {isOwnProfile
+										class="text-left bg-surface rounded-2xl border border-line overflow-hidden {isOwnProfile
 											? ''
-											: 'hover:shadow-md hover:border-blue-200 transition-all'}"
+											: 'hover:shadow-md hover:border-primary-line transition-all'}"
 									>
-										<div class="aspect-square w-full bg-gray-100 overflow-hidden">
+										<div class="aspect-square w-full bg-raised overflow-hidden">
 											<img
 												src={listing.image_url}
 												alt={listing.title}
@@ -207,15 +207,15 @@
 											/>
 										</div>
 										<div class="p-2.5">
-											<p class="text-sm font-semibold text-gray-900 truncate">{listing.title}</p>
+											<p class="text-sm font-semibold text-ink truncate">{listing.title}</p>
 											<div class="flex items-center justify-between gap-1 mt-1">
 												{#if listing.category}
-													<span class="text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full truncate">
+													<span class="text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary-soft px-1.5 py-0.5 rounded-full truncate">
 														{listing.category}
 													</span>
 												{/if}
 												{#if listing.price_range}
-													<span class="text-[10px] font-bold text-green-700 whitespace-nowrap">{listing.price_range}</span>
+													<span class="text-[10px] font-bold text-primary whitespace-nowrap">{listing.price_range}</span>
 												{/if}
 											</div>
 										</div>
@@ -237,7 +237,7 @@
 			>
 				<div class="p-4 space-y-3">
 					{#if wants.length === 0}
-						<p class="text-sm text-gray-500">
+						<p class="text-sm text-muted">
 							{isOwnProfile ? 'Még nincs igényed.' : 'Jelenleg nincs igénye.'}
 						</p>
 					{:else}

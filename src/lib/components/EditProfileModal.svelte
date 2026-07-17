@@ -141,19 +141,19 @@
 
 {#if isOpen}
 	<button
-		class="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm cursor-default"
+		class="fixed inset-0 z-50 bg-scrim backdrop-blur-sm cursor-default"
 		onclick={() => (isOpen = false)}
 		aria-label="Bezárás"
 	></button>
 	<div
-		class="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 mx-auto max-w-md bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto"
+		class="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 mx-auto max-w-md bg-surface rounded-3xl shadow-2xl border border-line max-h-[85vh] overflow-y-auto"
 	>
-		<div class="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between">
-			<h2 class="font-bold text-gray-900">Profil szerkesztése</h2>
+		<div class="sticky top-0 bg-surface border-b border-line p-4 flex items-center justify-between">
+			<h2 class="font-bold text-ink">Profil szerkesztése</h2>
 			<button
 				onclick={() => (isOpen = false)}
 				aria-label="Bezárás"
-				class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+				class="p-2 text-faint hover:text-muted hover:bg-raised rounded-full transition-colors"
 			>
 				<X class="w-5 h-5" />
 			</button>
@@ -161,56 +161,56 @@
 
 		<div class="p-4 space-y-4">
 			<div class="space-y-1">
-				<label for="ep_name" class="block text-sm font-semibold text-gray-700">Teljes név</label>
+				<label for="ep_name" class="block text-sm font-semibold text-ink">Teljes név</label>
 				<input
 					id="ep_name"
 					type="text"
 					bind:value={name}
-					class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+					class="w-full px-4 py-2.5 bg-raised border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all"
 				/>
-				<p class="text-xs text-gray-400">Csak te látod.</p>
+				<p class="text-xs text-faint">Csak te látod.</p>
 			</div>
 
 			<div class="space-y-1">
-				<label for="ep_username" class="block text-sm font-semibold text-gray-700">Felhasználónév *</label>
+				<label for="ep_username" class="block text-sm font-semibold text-ink">Felhasználónév *</label>
 				<div class="relative">
-					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">@</span>
+					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-faint pointer-events-none">@</span>
 					<input
 						id="ep_username"
 						type="text"
 						bind:value={username}
 						autocomplete="username"
-						class="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+						class="w-full pl-8 pr-4 py-2.5 bg-raised border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all"
 					/>
 				</div>
-				<p class="text-xs text-gray-400">Ez jelenik meg a nyilvános profilodon.</p>
+				<p class="text-xs text-faint">Ez jelenik meg a nyilvános profilodon.</p>
 			</div>
 
 			<div class="space-y-1">
-				<label for="ep_email" class="block text-sm font-semibold text-gray-700">E-mail cím</label>
+				<label for="ep_email" class="block text-sm font-semibold text-ink">E-mail cím</label>
 				<input
 					id="ep_email"
 					type="email"
 					bind:value={email}
 					disabled={!canChangeEmail}
-					class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+					class="w-full px-4 py-2.5 bg-raised border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all disabled:opacity-60 disabled:cursor-not-allowed"
 				/>
 				{#if !canChangeEmail}
-					<p class="text-xs text-gray-500">A belépési e-mail címet a Google-fiókod kezeli.</p>
+					<p class="text-xs text-muted">A belépési e-mail címet a Google-fiókod kezeli.</p>
 				{/if}
 			</div>
 
 			{#if emailChanged}
 				<div class="space-y-1">
-					<label for="ep_pw" class="block text-sm font-semibold text-gray-700">Jelenlegi jelszó</label>
+					<label for="ep_pw" class="block text-sm font-semibold text-ink">Jelenlegi jelszó</label>
 					<input
 						id="ep_pw"
 						type="password"
 						bind:value={currentPassword}
 						placeholder="••••••••"
-						class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+						class="w-full px-4 py-2.5 bg-raised border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all"
 					/>
-					<p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 flex items-start gap-1.5">
+					<p class="text-xs text-warn bg-warn-soft border border-warn rounded-lg px-3 py-2 flex items-start gap-1.5">
 						<TriangleAlert class="w-3.5 h-3.5 mt-0.5 shrink-0" />
 						<span>Biztonsági okból a jelszavad kell hozzá, és az új címre küldött linket is meg kell nyitnod.</span>
 					</p>
@@ -218,15 +218,15 @@
 			{/if}
 
 			<div class="space-y-1">
-				<label for="ep_address" class="block text-sm font-semibold text-gray-700">Lakcím</label>
+				<label for="ep_address" class="block text-sm font-semibold text-ink">Lakcím</label>
 				<input
 					id="ep_address"
 					type="text"
 					bind:value={address}
 					placeholder="Pl. 1111 Budapest, Fő utca 1."
-					class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+					class="w-full px-4 py-2.5 bg-raised border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all"
 				/>
-				<p class="text-xs text-gray-500 flex items-start gap-1.5">
+				<p class="text-xs text-muted flex items-start gap-1.5">
 					<MapPin class="w-3.5 h-3.5 mt-0.5 shrink-0" />
 					<span>A pontos címedet soha nem látják mások – nyilvánosan csak a településed/kerületed jelenik meg.</span>
 				</p>
@@ -234,20 +234,20 @@
 
 			<div class="grid grid-cols-2 gap-3">
 				<div class="space-y-1">
-					<label for="ep_dob" class="block text-sm font-semibold text-gray-700">Születési dátum</label>
+					<label for="ep_dob" class="block text-sm font-semibold text-ink">Születési dátum</label>
 					<input
 						id="ep_dob"
 						type="date"
 						bind:value={dateOfBirth}
-						class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+						class="w-full px-4 py-2.5 bg-raised border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all"
 					/>
 				</div>
 				<div class="space-y-1">
-					<label for="ep_gender" class="block text-sm font-semibold text-gray-700">Nem</label>
+					<label for="ep_gender" class="block text-sm font-semibold text-ink">Nem</label>
 					<select
 						id="ep_gender"
 						bind:value={gender}
-						class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+						class="w-full px-4 py-2.5 bg-raised border border-line rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all"
 					>
 						<option value="MALE">Férfi</option>
 						<option value="FEMALE">Nő</option>
@@ -257,24 +257,24 @@
 			</div>
 
 			{#if error}
-				<p class="text-sm text-red-600">{error}</p>
+				<p class="text-sm text-want">{error}</p>
 			{/if}
 			{#if notice}
-				<p class="text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">{notice}</p>
+				<p class="text-sm text-primary bg-primary-soft border border-primary-line rounded-lg px-3 py-2">{notice}</p>
 			{/if}
 		</div>
 
-		<div class="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2">
+		<div class="sticky bottom-0 bg-surface border-t border-line p-4 flex justify-end gap-2">
 			<button
 				onclick={() => (isOpen = false)}
-				class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+				class="px-4 py-2 text-sm font-semibold text-muted hover:bg-raised rounded-lg transition-colors"
 			>
 				Mégsem
 			</button>
 			<button
 				onclick={save}
 				disabled={submitting}
-				class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+				class="px-4 py-2 bg-primary hover:bg-primary-hover text-primary-fg rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
 			>
 				{submitting ? 'Mentés...' : 'Mentés'}
 			</button>

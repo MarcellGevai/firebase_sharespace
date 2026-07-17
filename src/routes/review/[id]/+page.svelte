@@ -48,41 +48,41 @@
 	<title>Értékelés - Sharespace</title>
 </svelte:head>
 
-<div class="flex flex-col min-h-full bg-gray-50 pb-20">
+<div class="flex flex-col min-h-full bg-raised pb-20">
 	<!-- Header -->
-	<header class="bg-white border-b border-gray-100 sticky top-0 z-30">
+	<header class="bg-surface border-b border-line sticky top-0 z-30">
 		<div class="flex items-center justify-between p-4 max-w-lg mx-auto">
-			<a href="/inbox" class="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors">
+			<a href="/inbox" class="p-2 -ml-2 text-faint hover:text-ink transition-colors">
 				<ArrowLeft class="w-5 h-5" />
 			</a>
-			<h1 class="text-lg font-bold text-gray-900">Értékelés leadása</h1>
+			<h1 class="text-lg font-bold text-ink">Értékelés leadása</h1>
 			<div class="w-9"></div>
 		</div>
 	</header>
 
 	<main class="flex-1 max-w-lg w-full mx-auto p-4 flex flex-col items-center">
 		{#if data.alreadyReviewed}
-			<div class="bg-white rounded-3xl p-8 text-center border border-gray-100 shadow-sm w-full mt-8">
-				<Star class="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-				<h2 class="text-xl font-bold text-gray-900 mb-2">Már értékeltél!</h2>
-				<p class="text-gray-500 mb-6">Ezt a tranzakciót ({data.listing_title}) már sikeresen értékelted.</p>
-				<a href="/inbox" class="inline-flex px-6 py-3 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 transition-colors">
+			<div class="bg-surface rounded-3xl p-8 text-center border border-line shadow-sm w-full mt-8">
+				<Star class="w-12 h-12 text-star mx-auto mb-4" />
+				<h2 class="text-xl font-bold text-ink mb-2">Már értékeltél!</h2>
+				<p class="text-muted mb-6">Ezt a tranzakciót ({data.listing_title}) már sikeresen értékelted.</p>
+				<a href="/inbox" class="inline-flex px-6 py-3 bg-primary text-primary-fg font-semibold rounded-2xl hover:bg-primary-hover transition-colors">
 					Vissza az üzenetekhez
 				</a>
 			</div>
 		{:else if data.reviewee}
-			<div class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm w-full mt-4">
+			<div class="bg-surface rounded-3xl p-6 border border-line shadow-sm w-full mt-4">
 				<div class="flex flex-col items-center text-center mb-8">
 					<a href={`/profile/${data.reviewee.id}`}>
 						<img
 							src={data.reviewee.avatar_url || `https://i.pravatar.cc/150?u=${data.reviewee.id}`}
 							alt={data.reviewee.name}
-							class="w-20 h-20 rounded-full object-cover shadow-sm mb-4 bg-gray-100 hover:opacity-80 transition-opacity"
+							class="w-20 h-20 rounded-full object-cover shadow-sm mb-4 bg-raised hover:opacity-80 transition-opacity"
 						/>
 					</a>
-					<h2 class="text-xl font-bold text-gray-900">Hogyan ment a bérlés?</h2>
-					<p class="text-sm text-gray-500 mt-1">
-						Értékeld <a href={`/profile/${data.reviewee.id}`} class="font-semibold text-gray-700 hover:text-blue-600 transition-colors">{data.reviewee.name}</a> felhasználót a "{data.listing_title}" kapcsán.
+					<h2 class="text-xl font-bold text-ink">Hogyan ment a bérlés?</h2>
+					<p class="text-sm text-muted mt-1">
+						Értékeld <a href={`/profile/${data.reviewee.id}`} class="font-semibold text-ink hover:text-primary transition-colors">{data.reviewee.name}</a> felhasználót a "{data.listing_title}" kapcsán.
 					</p>
 				</div>
 
@@ -99,14 +99,14 @@
 								onclick={() => rating = starValue}
 							>
 								<Star
-									class="w-10 h-10 transition-colors {starValue <= (hoverRating || rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}"
+									class="w-10 h-10 transition-colors {starValue <= (hoverRating || rating) ? 'text-star fill-star' : 'text-faint'}"
 								/>
 							</button>
 						{/each}
 					</div>
 
 					{#if rating > 0}
-						<div class="text-center font-bold text-yellow-500">
+						<div class="text-center font-bold text-star-ink">
 							{#if rating === 1}Borzasztó
 							{:else if rating === 2}Rossz
 							{:else if rating === 3}Elmegy
@@ -114,31 +114,31 @@
 							{:else if rating === 5}Tökéletes!{/if}
 						</div>
 					{:else}
-						<div class="text-center font-medium text-gray-400">
+						<div class="text-center font-medium text-faint">
 							Válassz egy csillagot
 						</div>
 					{/if}
 
 					<!-- Content -->
 					<div class="w-full space-y-1.5 mt-4">
-						<label for="content" class="block text-sm font-semibold text-gray-700">Szöveges értékelés (opcionális)</label>
+						<label for="content" class="block text-sm font-semibold text-ink">Szöveges értékelés (opcionális)</label>
 						<textarea
 							id="content"
 							bind:value={content}
 							rows="4"
 							placeholder="Írd le a tapasztalataidat..."
-							class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none"
+							class="w-full px-4 py-3 bg-raised border border-line rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all resize-none"
 						></textarea>
 					</div>
 
 					{#if errorMsg}
-						<p class="text-sm text-red-500 bg-red-50 px-4 py-2 rounded-xl w-full text-center">{errorMsg}</p>
+						<p class="text-sm text-red-500 bg-want-soft px-4 py-2 rounded-xl w-full text-center">{errorMsg}</p>
 					{/if}
 
 					<button
 						type="submit"
 						disabled={isSubmitting || rating === 0}
-						class="w-full py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
+						class="w-full py-3.5 px-6 bg-primary hover:bg-primary-hover text-primary-fg font-bold rounded-2xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
 					>
 						{#if isSubmitting}
 							<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

@@ -8,42 +8,108 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
-  Semantic surface tokens. Colour utilities compile to `var(--color-*)`, so
-  overriding the variable under .dark flips every use at once - no `dark:` needed
-  on the ~476 places that reference a surface. Reserve `dark:` for the few spots
+  Semantic tokens. Colour utilities compile to `var(--color-*)`, so overriding a
+  variable under .dark flips every use at once - no `dark:` needed on the several
+  hundred places that reference a surface. Reserve `dark:` for the few spots
   where the two designs genuinely diverge.
 
-  Light: Apple-ish cool grey canvas with white cards lifted off it.
+  Never reach for a raw Tailwind grey (bg-white, text-gray-500, border-gray-200)
+  in a component: those are fixed values that cannot flip, and each one is a
+  dark-mode bug waiting to happen. Use the tokens below.
+
+  Light: cool grey canvas with white cards lifted off it.
 */
 @theme {
-	--color-canvas: #f5f5f7;
+	--color-canvas: #f4f5f7;
 	--color-surface: #ffffff;
-	--color-raised: #f5f5f7;
-	--color-line: #e5e7eb;
-	--color-ink: #111827;
-	--color-muted: #6b7280;
+	--color-raised: #f1f3f5;
+	--color-line: #e4e7eb;
+	--color-ink: #101418;
+	--color-muted: #5f6b76;
+	--color-faint: #868f9b;
+
+	/*
+	  Brand green. Light mode needs a deep green to clear 4.5:1 against white
+	  text - #16a34a, the obvious pick, is only 3.4:1 and fails. Dark mode
+	  inverts the relationship: a bright green carrying near-black text, which is
+	  both far more legible (~9:1) and the source of the reference design's punch.
+	*/
+	--color-primary: #15803d;
+	--color-primary-hover: #126432;
+	--color-primary-fg: #ffffff;
+	--color-primary-soft: #f0faf3;
+	--color-primary-line: #bfe5cd;
+
+	/*
+	  Igény (a want) is the inverse of a listing and has always been the app's
+	  second colour. Coral rather than the old pure red: with green now primary,
+	  red-against-green reads as alarm, and red is worth reserving for
+	  destructive actions and errors so that it still means something.
+	*/
+	--color-want: #d1385a;
+	--color-want-hover: #b32c4b;
+	--color-want-fg: #ffffff;
+	--color-want-soft: #fff7f9;
+	--color-want-line: #f7ccd6;
+
+	--color-danger: #dc2626;
+	/* Ratings, warnings, and "in progress" - meanings green must not swallow. */
+	--color-star: #eab308;
+	--color-star-ink: #854d0e;
+	--color-warn: #b45309;
+	--color-warn-soft: #fffbeb;
+	--color-progress: #7c3aed;
+
+	/* Modal backdrop. A token because it sits over the page in both themes and
+	   needs to go darker on dark, where a 40% veil barely registers. */
+	--color-scrim: rgba(10, 11, 13, 0.4);
 
 	/*
 	  Use as shadow-[var(--shadow-card)], NOT shadow-card: Tailwind inlines the
 	  value into the `shadow-*` utility, so the .dark override below would never
 	  apply. Going through var() keeps the indirection that makes it flip.
 	*/
-	--shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+	--shadow-card: 0 1px 2px rgba(16, 20, 24, 0.04), 0 8px 24px rgba(16, 20, 24, 0.06);
+	--shadow-pop: 0 8px 32px rgba(16, 20, 24, 0.12);
 }
 
 /*
-  Dark: deep neutral near-black, not pure black. Drop shadows are invisible at
-  this depth, so elevation comes from a light hairline plus a soft black bloom.
+  Dark: deep neutral near-black, not pure black, so stacked surfaces can still
+  separate from the canvas. Drop shadows are invisible at this depth, so
+  elevation comes from a light hairline plus a soft black bloom.
 */
 :root.dark {
-	--color-canvas: #09090b;
-	--color-surface: #18181b;
-	--color-raised: #27272a;
-	--color-line: #27272a;
-	--color-ink: #f4f4f5;
-	--color-muted: #a1a1aa;
+	--color-canvas: #0a0b0d;
+	--color-surface: #141619;
+	--color-raised: #1e2126;
+	--color-line: #2a2e35;
+	--color-ink: #eef1f4;
+	--color-muted: #9aa4b0;
+	--color-faint: #6b7683;
 
-	--shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 32px rgba(0, 0, 0, 0.6);
+	--color-primary: #2ee06a;
+	--color-primary-hover: #4ce983;
+	--color-primary-fg: #05140a;
+	--color-primary-soft: #10281a;
+	--color-primary-line: #1d5335;
+
+	--color-want: #ff6b85;
+	--color-want-hover: #ff8899;
+	--color-want-fg: #2b0710;
+	--color-want-soft: #2a1119;
+	--color-want-line: #5c2436;
+
+	--color-danger: #f87171;
+	--color-star: #facc15;
+	--color-star-ink: #facc15;
+	--color-warn: #fbbf24;
+	--color-warn-soft: #2a2010;
+	--color-progress: #a78bfa;
+
+	--color-scrim: rgba(0, 0, 0, 0.7);
+
+	--shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.55);
+	--shadow-pop: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 16px 48px rgba(0, 0, 0, 0.7);
 }
 
 /*
@@ -61,5 +127,86 @@
 	button:not(:disabled),
 	[role='button']:not(:disabled) {
 		cursor: pointer;
+	}
+
+	/*
+	  One brand-coloured focus ring for keyboard users, everywhere. :focus-visible
+	  rather than :focus, so a mouse click doesn't leave a ring behind.
+	*/
+	:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
+}
+
+/*
+  Button system. The brief asks that primary and secondary be obviously
+  different, which is impossible to hold together while every button re-declares
+  its own colours inline - so the roles live here, once.
+
+    btn-primary    filled green   - the one action a screen wants you to take
+    btn-want       filled coral   - the Igény counterpart to primary
+    btn-secondary  outlined       - safe/alternative actions, never confusable
+                                    with the filled primary beside it
+    btn-ghost      text only      - tertiary, e.g. Mégsem
+*/
+@layer components {
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		border-radius: 9999px;
+		padding: 0.625rem 1.25rem;
+		font-weight: 700;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+		border: 1px solid transparent;
+		transition:
+			background-color 150ms ease,
+			border-color 150ms ease,
+			color 150ms ease,
+			transform 150ms ease;
+	}
+	.btn:active:not(:disabled) {
+		transform: scale(0.97);
+	}
+	.btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.btn-primary {
+		background-color: var(--color-primary);
+		color: var(--color-primary-fg);
+	}
+	.btn-primary:hover:not(:disabled) {
+		background-color: var(--color-primary-hover);
+	}
+
+	.btn-want {
+		background-color: var(--color-want);
+		color: var(--color-want-fg);
+	}
+	.btn-want:hover:not(:disabled) {
+		background-color: var(--color-want-hover);
+	}
+
+	.btn-secondary {
+		background-color: var(--color-surface);
+		color: var(--color-ink);
+		border-color: var(--color-line);
+	}
+	.btn-secondary:hover:not(:disabled) {
+		background-color: var(--color-raised);
+	}
+
+	.btn-ghost {
+		background-color: transparent;
+		color: var(--color-muted);
+	}
+	.btn-ghost:hover:not(:disabled) {
+		background-color: var(--color-raised);
+		color: var(--color-ink);
 	}
 }

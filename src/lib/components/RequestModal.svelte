@@ -169,21 +169,21 @@
 
 {#if isOpen && (listing || want)}
 	<!-- Backdrop -->
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm transition-opacity">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm transition-opacity">
 
 		<!-- Modal Content -->
-		<div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden relative" role="dialog" aria-modal="true">
+		<div class="bg-surface rounded-2xl w-full max-w-md shadow-2xl overflow-hidden relative" role="dialog" aria-modal="true">
 
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-gray-100">
-				<h2 class="text-lg font-bold text-gray-900">
+			<div class="flex items-center justify-between p-4 border-b border-line">
+				<h2 class="text-lg font-bold text-ink">
 					{#if isOffer}
 						Ajánlat tétel
 					{:else}
 						Request {listing.type === 'ITEM' ? 'Item' : 'Service'}
 					{/if}
 				</h2>
-				<button onclick={onClose} class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+				<button onclick={onClose} class="p-2 text-faint hover:text-muted hover:bg-raised rounded-full transition-colors">
 					<X class="w-5 h-5" />
 				</button>
 			</div>
@@ -192,29 +192,29 @@
 			<div class="p-4 space-y-4">
 
 				<!-- Subject preview. Wants carry no photo, so they get a glyph tile. -->
-				<div class="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
+				<div class="flex items-center gap-4 p-3 bg-raised rounded-xl">
 					{#if isOffer}
-						<div class="w-16 h-16 rounded-lg bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+						<div class="w-16 h-16 rounded-lg bg-want-soft text-want flex items-center justify-center flex-shrink-0">
 							<Search class="w-6 h-6" />
 						</div>
 						<div class="min-w-0">
-							<h3 class="font-semibold text-gray-900 truncate">{want.title}</h3>
-							<p class="text-xs text-red-600 uppercase font-semibold tracking-wide">Igény</p>
+							<h3 class="font-semibold text-ink truncate">{want.title}</h3>
+							<p class="text-xs text-want uppercase font-semibold tracking-wide">Igény</p>
 							{#if want.price_min != null && want.price_max != null}
-								<p class="text-xs text-gray-500 mt-0.5">Elképzelt ár: {want.price_min} – {want.price_max} Ft</p>
+								<p class="text-xs text-muted mt-0.5">Elképzelt ár: {want.price_min} – {want.price_max} Ft</p>
 							{/if}
 						</div>
 					{:else}
-						<img src={listing.image_url} alt={listing.title} class="w-16 h-16 rounded-lg object-cover bg-gray-200" />
+						<img src={listing.image_url} alt={listing.title} class="w-16 h-16 rounded-lg object-cover bg-raised" />
 						<div>
-							<h3 class="font-semibold text-gray-900">{listing.title}</h3>
-							<p class="text-xs text-gray-500 uppercase font-semibold tracking-wide">{listing.type}</p>
+							<h3 class="font-semibold text-ink">{listing.title}</h3>
+							<p class="text-xs text-muted uppercase font-semibold tracking-wide">{listing.type}</p>
 						</div>
 					{/if}
 				</div>
 
 				{#if isFixedAvailability}
-					<p class="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+					<p class="text-xs text-primary bg-primary-soft border border-primary-line rounded-lg px-3 py-2">
 						{#if isOffer}
 							Erre az igényre {availabilityMin} és {availabilityMax} között lehet ajánlatot tenni.
 						{:else}
@@ -226,25 +226,25 @@
 				<!-- Form -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1.5">
-						<label for="start_date" class="block text-sm font-semibold text-gray-700">Start Date</label>
+						<label for="start_date" class="block text-sm font-semibold text-ink">Start Date</label>
 						<input
 							type="date"
 							id="start_date"
 							bind:value={startDate}
 							min={availabilityMin}
 							max={availabilityMax}
-							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+							class="w-full px-3 py-2 bg-surface border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
 						/>
 					</div>
 					<div class="space-y-1.5">
-						<label for="end_date" class="block text-sm font-semibold text-gray-700">End Date</label>
+						<label for="end_date" class="block text-sm font-semibold text-ink">End Date</label>
 						<input
 							type="date"
 							id="end_date"
 							bind:value={endDate}
 							min={availabilityMin}
 							max={availabilityMax}
-							class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+							class="w-full px-3 py-2 bg-surface border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
 						/>
 					</div>
 				</div>
@@ -252,21 +252,21 @@
 				<!-- Price Offer -->
 				<div class="space-y-1.5">
 					<div class="flex items-center justify-between">
-						<label for="price_offer" class="block text-sm font-semibold text-gray-700">Ajánlott ár (HUF)</label>
-						<span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Ajánlott: {recommendedPrice} Ft</span>
+						<label for="price_offer" class="block text-sm font-semibold text-ink">Ajánlott ár (HUF)</label>
+						<span class="text-xs font-medium text-primary bg-primary-soft px-2 py-0.5 rounded-full">Ajánlott: {recommendedPrice} Ft</span>
 					</div>
 					<input 
 						type="number" 
 						id="price_offer" 
 						bind:value={priceOffer}
 						placeholder="Add meg az összeget..."
-						class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-semibold"
+						class="w-full px-3 py-2 bg-surface border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-semibold"
 					/>
 				</div>
 
 				<!-- Message -->
 				<div class="space-y-1.5">
-					<label for="message" class="block text-sm font-semibold text-gray-700">
+					<label for="message" class="block text-sm font-semibold text-ink">
 						{isOffer ? 'Üzenet (opcionális)' : 'Message to Owner (Optional)'}
 					</label>
 					<textarea 
@@ -274,27 +274,27 @@
 						bind:value={message}
 						rows="3" 
 						placeholder="Hi! I'd love to borrow this..."
-						class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+						class="w-full px-3 py-2 bg-surface border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
 					></textarea>
 				</div>
 
 				{#if errorMsg}
-					<p class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{errorMsg}</p>
+					<p class="text-sm text-want bg-want-soft p-3 rounded-lg">{errorMsg}</p>
 				{/if}
 			</div>
 
 			<!-- Footer -->
-			<div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+			<div class="p-4 bg-raised border-t border-line flex justify-end gap-3">
 				<button 
 					onclick={onClose} 
-					class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors"
+					class="px-5 py-2.5 text-sm font-semibold text-muted hover:bg-raised rounded-xl transition-colors"
 				>
 					Cancel
 				</button>
 				<button 
 					onclick={handleSubmit} 
 					disabled={isSubmitting}
-					class="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+					class="px-5 py-2.5 text-sm font-semibold text-primary-fg bg-primary hover:bg-primary-hover rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					{#if isSubmitting}
 						<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

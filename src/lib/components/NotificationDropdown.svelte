@@ -94,7 +94,7 @@
 <div class="relative group/nav" bind:this={dropdownRef}>
 	<button
 		onclick={toggleDropdown}
-		class="p-2 md:p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors relative"
+		class="p-2 md:p-3 text-muted hover:text-primary hover:bg-primary-soft rounded-xl transition-colors relative"
 		aria-label="Értesítések"
 		aria-expanded={isOpen}
 	>
@@ -110,7 +110,7 @@
 	     open so the label isn't left hovering over it. -->
 	{#if !isOpen}
 		<span
-			class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 rounded-md bg-gray-900 text-white text-xs font-medium whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150 z-50"
+			class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 rounded-md bg-primary text-primary-fg text-xs font-medium whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150 z-50"
 			aria-hidden="true"
 		>
 			Értesítések
@@ -118,38 +118,38 @@
 	{/if}
 
 	{#if isOpen}
-		<div class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
-			<div class="p-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-				<h3 class="text-sm font-semibold text-gray-900">Értesítések</h3>
+		<div class="absolute right-0 mt-2 w-80 bg-surface rounded-xl shadow-xl border border-line overflow-hidden z-50">
+			<div class="p-3 bg-raised border-b border-line flex items-center justify-between">
+				<h3 class="text-sm font-semibold text-ink">Értesítések</h3>
 				{#if unreadCount > 0}
-					<span class="text-xs text-blue-600 font-medium">{unreadCount} olvasatlan</span>
+					<span class="text-xs text-primary font-medium">{unreadCount} olvasatlan</span>
 				{/if}
 			</div>
 
 			<div class="max-h-80 overflow-y-auto">
 				{#if loading}
-					<div class="p-6 text-center text-gray-400 text-sm">Betöltés...</div>
+					<div class="p-6 text-center text-faint text-sm">Betöltés...</div>
 				{:else if notifications.length === 0}
-					<div class="p-6 text-center text-gray-400 text-sm">Nincsenek értesítések</div>
+					<div class="p-6 text-center text-faint text-sm">Nincsenek értesítések</div>
 				{:else}
 					{#each notifications as notification (notification.id)}
 						{@const IconComponent = getIcon(notification.type)}
 						<button
 							onclick={() => handleNotificationClick(notification)}
-							class="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0 {notification.is_read ? '' : 'bg-blue-50/50'}"
+							class="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-raised transition-colors border-b border-line last:border-b-0 {notification.is_read ? '' : 'bg-primary-soft/50'}"
 						>
-							<div class="mt-0.5 p-1.5 rounded-lg {notification.is_read ? 'bg-gray-100 text-gray-400' : 'bg-blue-100 text-blue-600'}">
+							<div class="mt-0.5 p-1.5 rounded-lg {notification.is_read ? 'bg-raised text-faint' : 'bg-primary-soft text-primary'}">
 								<IconComponent class="w-4 h-4" />
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="text-sm text-gray-900 leading-tight {notification.is_read ? '' : 'font-semibold'}">
+								<p class="text-sm text-ink leading-tight {notification.is_read ? '' : 'font-semibold'}">
 									{notification.title}
 								</p>
-								<p class="text-xs text-gray-500 mt-0.5 truncate">{notification.body}</p>
-								<p class="text-xs text-gray-400 mt-1">{formatRelativeTime(notification.created_at)}</p>
+								<p class="text-xs text-muted mt-0.5 truncate">{notification.body}</p>
+								<p class="text-xs text-faint mt-1">{formatRelativeTime(notification.created_at)}</p>
 							</div>
 							{#if !notification.is_read}
-								<div class="mt-2 w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+								<div class="mt-2 w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
 							{/if}
 						</button>
 					{/each}

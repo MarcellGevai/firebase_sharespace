@@ -115,16 +115,16 @@
 
 <div class="space-y-6">
 	<!-- Hirdetések / Igények mode switch -->
-	<div class="grid grid-cols-2 gap-2 bg-gray-100 rounded-2xl p-1">
+	<div class="grid grid-cols-2 gap-2 bg-raised rounded-2xl p-1">
 		<button
 			onclick={() => (mode = 'LISTINGS')}
-			class="py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 {mode === 'LISTINGS' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+			class="py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 {mode === 'LISTINGS' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}"
 		>
 			<Package class="w-4 h-4" /> Hirdetések
 		</button>
 		<button
 			onclick={() => (mode = 'WANTS')}
-			class="py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 {mode === 'WANTS' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+			class="py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 {mode === 'WANTS' ? 'bg-surface text-want shadow-sm' : 'text-muted hover:text-ink'}"
 		>
 			<Search class="w-4 h-4" /> Igények
 		</button>
@@ -137,16 +137,16 @@
 			<button
 				onclick={() => (category = 'ITEMS')}
 				class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors border {category === 'ITEMS'
-					? 'bg-blue-600 text-white border-blue-600'
-					: 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}"
+					? 'bg-primary-soft text-primary border-primary'
+					: 'bg-surface text-muted border-line hover:bg-raised'}"
 			>
 				Tárgyak
 			</button>
 			<button
 				onclick={() => (category = 'SERVICES')}
 				class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors border {category === 'SERVICES'
-					? 'bg-blue-600 text-white border-blue-600'
-					: 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}"
+					? 'bg-primary-soft text-primary border-primary'
+					: 'bg-surface text-muted border-line hover:bg-raised'}"
 			>
 				Szolgáltatások/Események
 			</button>
@@ -157,13 +157,13 @@
 		<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
 			<button
 				onclick={() => (view = 'ALL')}
-				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors {view === 'ALL' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors border {view === 'ALL' ? 'bg-primary-soft text-primary border-primary' : 'bg-surface text-muted hover:bg-raised border-line'}"
 			>
 				Összes
 			</button>
 			<button
 				onclick={() => (view = 'GROUPED')}
-				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors {view === 'GROUPED' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors border {view === 'GROUPED' ? 'bg-primary-soft text-primary border-primary' : 'bg-surface text-muted hover:bg-raised border-line'}"
 			>
 				{groupedLabel}
 			</button>
@@ -172,7 +172,7 @@
 		{#if view === 'GROUPED'}
 			<!-- Summarized: one cell per category, with how many are up. -->
 			{#if groupedItems.length === 0}
-				<div class="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-gray-500">
+				<div class="bg-surface rounded-2xl border border-line shadow-sm text-center py-12 text-muted">
 					<p>{emptyLabel}</p>
 				</div>
 			{:else}
@@ -185,7 +185,7 @@
 							     silhouette. aria-hidden - the label beside it already says
 							     which category this is. -->
 							<div class="relative w-11 h-11 shrink-0 flex items-center justify-center">
-								<svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full text-gray-300" aria-hidden="true">
+								<svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full text-faint" aria-hidden="true">
 									<polygon
 										points="50,3 93,27 93,73 50,97 7,73 7,27"
 										fill="none"
@@ -193,11 +193,11 @@
 										stroke-width="5"
 									/>
 								</svg>
-								<Icon class="relative w-5 h-5 text-gray-500" />
+								<Icon class="relative w-5 h-5 text-muted" />
 							</div>
-							<p class="min-w-0 text-gray-800 leading-snug">
+							<p class="min-w-0 text-ink leading-snug">
 								<span class="break-words">{group.category}</span>
-								<span class="font-bold text-gray-900 whitespace-nowrap">({group.count})</span>
+								<span class="font-bold text-ink whitespace-nowrap">({group.count})</span>
 							</p>
 						</div>
 					{/each}
@@ -207,7 +207,7 @@
 			<!-- Feed -->
 			<div class="space-y-6">
 				{#if filteredItems.length === 0}
-					<div class="text-center py-12 text-gray-500">
+					<div class="text-center py-12 text-muted">
 						<p>{emptyLabel}</p>
 					</div>
 				{:else}
@@ -226,7 +226,7 @@
 		<!-- Wants -->
 		<div class="space-y-6">
 			{#if filteredWants.length === 0}
-				<div class="text-center py-12 text-gray-500">
+				<div class="text-center py-12 text-muted">
 					<p>Jelenleg nincs igény ebben a kategóriában.</p>
 				</div>
 			{:else}

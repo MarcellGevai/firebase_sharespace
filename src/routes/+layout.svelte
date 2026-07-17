@@ -44,7 +44,7 @@
 			     always tappable so touch devices, which never hover, can reach both. -->
 			<button
 				onclick={() => isRequestModalOpen = true}
-				class="group/red bg-red-600 hover:bg-red-700 text-white h-14 rounded-full flex items-center shadow-lg shadow-red-200 transition-all duration-300 active:scale-95 overflow-hidden"
+				class="group/red bg-want hover:bg-want-hover text-want-fg h-14 rounded-full flex items-center shadow-lg shadow-want-line transition-all duration-300 active:scale-95 overflow-hidden"
 				aria-label="Új Igény"
 			>
 				<div class="w-14 h-14 flex items-center justify-center flex-shrink-0">
@@ -57,7 +57,7 @@
 
 			<button
 				onclick={() => isModalOpen = true}
-				class="group/blue bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-full flex items-center shadow-lg shadow-blue-200 transition-all duration-300 active:scale-95 overflow-hidden"
+				class="group/blue bg-primary hover:bg-primary-hover text-primary-fg h-14 rounded-full flex items-center shadow-lg shadow-primary-line transition-all duration-300 active:scale-95 overflow-hidden"
 				aria-label="Új Hirdetés"
 			>
 				<div class="w-14 h-14 flex items-center justify-center flex-shrink-0">

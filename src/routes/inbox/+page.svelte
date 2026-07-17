@@ -52,48 +52,48 @@
 </svelte:head>
 
 <div class="max-w-2xl mx-auto space-y-6">
-	<h1 class="text-2xl font-bold text-gray-900 px-2">Messages</h1>
+	<h1 class="text-2xl font-bold text-ink px-2">Messages</h1>
 
 	{#if !loaded}
 		<div class="flex justify-center py-12">
-			<div class="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+			<div class="w-8 h-8 border-4 border-line border-t-primary rounded-full animate-spin"></div>
 		</div>
 	{:else if conversations.length === 0}
-		<div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+		<div class="text-center py-12 bg-surface rounded-2xl shadow-sm border border-line">
 			<div class="text-4xl mb-4">📭</div>
-			<h2 class="text-lg font-semibold text-gray-900">No messages yet</h2>
-			<p class="text-gray-500 mt-1">When you request an item or someone requests yours, messages will appear here.</p>
+			<h2 class="text-lg font-semibold text-ink">No messages yet</h2>
+			<p class="text-muted mt-1">When you request an item or someone requests yours, messages will appear here.</p>
 		</div>
 	{:else}
-		<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+		<div class="bg-surface rounded-2xl shadow-sm border border-line overflow-hidden divide-y divide-line">
 			{#each conversations as conv (conv.listing_id + conv.other_user_id)}
 				<a
 					href={chatUrl(conv.listing_id, conv.other_user_id)}
-					class="flex gap-4 p-4 hover:bg-gray-50 transition-colors group relative"
+					class="flex gap-4 p-4 hover:bg-raised transition-colors group relative"
 				>
 					<!-- Unread Indicator -->
 					{#if !conv.is_read && !conv.is_mine}
-						<div class="absolute top-1/2 -translate-y-1/2 left-2 w-2 h-2 bg-blue-500 rounded-full"></div>
+						<div class="absolute top-1/2 -translate-y-1/2 left-2 w-2 h-2 bg-primary rounded-full"></div>
 					{/if}
 
 					<!-- Avatar -->
 					<div class="relative shrink-0 ml-2">
-						<img src={conv.other_user_avatar} alt={conv.other_user_name} class="w-12 h-12 rounded-full object-cover bg-gray-100" />
-						<img src={conv.listing_image} alt="Listing" class="w-5 h-5 rounded-full object-cover absolute -bottom-1 -right-1 border-2 border-white bg-white" />
+						<img src={conv.other_user_avatar} alt={conv.other_user_name} class="w-12 h-12 rounded-full object-cover bg-raised" />
+						<img src={conv.listing_image} alt="Listing" class="w-5 h-5 rounded-full object-cover absolute -bottom-1 -right-1 border-2 border-white bg-surface" />
 					</div>
 
 					<!-- Content -->
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center justify-between gap-2 mb-0.5">
-							<h3 class="font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+							<h3 class="font-bold text-ink truncate group-hover:text-primary transition-colors">
 								{conv.other_user_name}
 							</h3>
-							<span class="text-xs text-gray-400 whitespace-nowrap">{formatDate(conv.created_at)}</span>
+							<span class="text-xs text-faint whitespace-nowrap">{formatDate(conv.created_at)}</span>
 						</div>
-						<p class="text-xs font-medium text-blue-600 mb-1 truncate">{conv.listing_title}</p>
-						<p class="text-sm text-gray-500 truncate {(!conv.is_read && !conv.is_mine) ? 'font-semibold text-gray-800' : ''}">
+						<p class="text-xs font-medium text-primary mb-1 truncate">{conv.listing_title}</p>
+						<p class="text-sm text-muted truncate {(!conv.is_read && !conv.is_mine) ? 'font-semibold text-ink' : ''}">
 							{#if conv.is_mine}
-								<span class="text-gray-400">You: </span>
+								<span class="text-faint">You: </span>
 							{/if}
 							{conv.last_message}
 						</p>

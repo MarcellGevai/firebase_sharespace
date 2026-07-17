@@ -5,8 +5,8 @@
 </script>
 
 <div
-	class="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold"
+	class="flex items-center gap-1 px-2 py-1 bg-warn-soft text-star-ink rounded-full text-xs font-semibold"
 >
-	<Star class="w-3 h-3 fill-yellow-500 text-yellow-500" />
+	<Star class="w-3 h-3 fill-star text-star" />
 	{score.toFixed(1)}
 </div>

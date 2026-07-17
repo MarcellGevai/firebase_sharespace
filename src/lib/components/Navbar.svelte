@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { Search, Bell, MessageCircle, Menu, X, Map, LayoutList, Clock, Sun, Moon } from 'lucide-svelte';
+	import { Search, MessageCircle, Map, LayoutList, Clock, Sun, Moon, LogOut } from 'lucide-svelte';
 	import { theme, toggleTheme } from '$lib/theme';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { User, Listing } from '$lib/types';
-	import { CATEGORIES } from '$lib/categories';
 	import { displayName } from '$lib/username';
 	import NotificationDropdown from './NotificationDropdown.svelte';
 	import { logout } from '$lib/auth';
@@ -26,8 +25,6 @@
 		await logout();
 		window.location.href = '/';
 	}
-
-	let isCategoryMenuOpen = $state(false);
 
 	// "/" (the map) needs an exact match - every route "starts with" "/".
 	function isActive(path: string): boolean {
@@ -210,7 +207,7 @@
 		<div class="flex items-center gap-2">
 			<!-- Actions -->
 			<div class="hidden md:flex items-center gap-2 lg:gap-3">
-			{@render navItem('/feed', 'Hirdetések', LayoutList)}
+			{@render navItem('/feed', 'Hirdetések/Igények', LayoutList)}
 			{@render navItem('/', 'Térkép', Map)}
 			{#if currentUser}
 				<NotificationDropdown />
@@ -225,7 +222,6 @@
 							<p class="text-muted text-xs text-left">⭐️ {currentUser.trust_score}</p>
 						</div>
 					</a>
-					<button onclick={handleLogout} class="ml-2 text-xs text-want font-semibold hover:bg-want-soft px-2 py-1 rounded-md">Logout</button>
 				</div>
 			{:else}
 				<a href="/login" class="text-sm font-semibold text-ink hover:text-primary transition-colors">Log in</a>
@@ -252,45 +248,23 @@
 			</span>
 		</div>
 
-		<!-- Category Menu -->
-		<div class="relative ml-2 group/nav">
-			<button
-				aria-label="Kategóriák"
-				aria-expanded={isCategoryMenuOpen}
-				onclick={() => isCategoryMenuOpen = !isCategoryMenuOpen}
-				class="p-2 text-muted hover:text-primary hover:bg-primary-soft rounded-xl transition-colors flex items-center justify-center"
-			>
-				{#if isCategoryMenuOpen}
-					<X class="w-6 h-6" />
-				{:else}
-					<Menu class="w-6 h-6" />
-				{/if}
-			</button>
-			<!-- Suppressed while open, so the label isn't left hovering over the panel
-			     it just opened. -->
-			{#if !isCategoryMenuOpen}
-				<span class={tooltipClass} aria-hidden="true">Kategóriák</span>
-			{/if}
-
-			{#if isCategoryMenuOpen}
-				<div class="absolute right-0 mt-2 w-56 bg-surface rounded-xl shadow-xl border border-line overflow-hidden z-50">
-					<div class="p-3 bg-raised border-b border-line">
-						<h3 class="text-sm font-semibold text-ink">Kategóriák</h3>
-					</div>
-					<div class="py-1 max-h-64 overflow-y-auto">
-						{#each CATEGORIES as category}
-							<a 
-								href="/feed?category={category}" 
-								onclick={() => isCategoryMenuOpen = false}
-								class="block px-4 py-2.5 text-sm text-ink hover:bg-primary-soft hover:text-primary transition-colors"
-							>
-								{category}
-							</a>
-						{/each}
-					</div>
-				</div>
-			{/if}
-		</div>
+		<!-- Logout takes the slot the Kategóriák menu used to hold. That menu only
+		     ever linked to /feed?category=..., which the feed's grouped list and the
+		     map's own filter both cover - a third way to do the same thing. Outside
+		     the `hidden md:flex` actions block, so signing out doesn't need a
+		     desktop, which is also why the mobile bar no longer carries its own. -->
+		{#if currentUser}
+			<div class="relative ml-2 group/nav">
+				<button
+					onclick={handleLogout}
+					aria-label="Kijelentkezés"
+					class="p-2 md:p-3 text-muted hover:text-want hover:bg-want-soft rounded-xl transition-colors flex items-center justify-center"
+				>
+					<LogOut class={navGlyphClass} />
+				</button>
+				<span class={tooltipClass} aria-hidden="true">Kijelentkezés</span>
+			</div>
+		{/if}
 		</div>
 	</div>
 	
@@ -302,7 +276,7 @@
 				<span class="text-sm font-semibold text-ink">{displayName(currentUser)}</span>
 			</a>
 			<div class="flex items-center gap-3">
-				<a href="/feed" class={`p-1.5 rounded-lg transition-colors ${isActive('/feed') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Hirdetések">
+				<a href="/feed" class={`p-1.5 rounded-lg transition-colors ${isActive('/feed') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Hirdetések/Igények">
 					<LayoutList class="w-5 h-5" />
 				</a>
 				<a href="/" class={`p-1.5 rounded-lg transition-colors ${isActive('/') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Térkép">
@@ -311,11 +285,10 @@
 				<a href="/rentals" class={`p-1.5 rounded-lg transition-colors ${isActive('/rentals') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Bérléseim">
 					<Clock class="w-5 h-5" />
 				</a>
-				<button onclick={handleLogout} class="text-xs text-want font-semibold px-2 py-1">Logout</button>
 			</div>
 		{:else}
 			<div class="flex items-center gap-2">
-				<a href="/feed" class={`p-1.5 rounded-lg transition-colors ${isActive('/feed') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Hirdetések">
+				<a href="/feed" class={`p-1.5 rounded-lg transition-colors ${isActive('/feed') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Hirdetések/Igények">
 					<LayoutList class="w-5 h-5" />
 				</a>
 				<a href="/" class={`p-1.5 rounded-lg transition-colors ${isActive('/') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Térkép">

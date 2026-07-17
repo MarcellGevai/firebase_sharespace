@@ -4,15 +4,18 @@
 	import WantCard from '$lib/components/WantCard.svelte';
 	import type { PageData } from './$types';
 	import { page } from '$app/stores';
-	import { Package, Search, MapPin } from 'lucide-svelte';
-	import { distanceKmTo, byDistance, formatDistance, type Coords } from '$lib/distance';
-	import { groupByTitle } from '$lib/grouping';
+	import { Package, Search } from 'lucide-svelte';
+	import { distanceKmTo, byDistance, type Coords } from '$lib/distance';
+	import { groupByCategory } from '$lib/grouping';
+	import { categoryIcon } from '$lib/categories';
 
 	let { data }: { data: PageData } = $props();
 
 	let mode = $state<'LISTINGS' | 'WANTS'>('LISTINGS');
-	let subView = $state<'ITEMS' | 'GROUPED'>('ITEMS');
-	let activeFilter = $state('ALL');
+	// Under Hirdetések, the listing type is the top-level split (it used to be a
+	// filter pill alongside an "All"), and each side offers the same two views.
+	let category = $state<'ITEMS' | 'SERVICES'>('ITEMS');
+	let view = $state<'ALL' | 'GROUPED'>('ALL');
 
 	let activeCategory = $derived($page.url.searchParams.get('category'));
 	let searchQuery = $derived($page.url.searchParams.get('q')?.toLowerCase() ?? '');
@@ -45,9 +48,10 @@
 	let filteredItems = $derived(
 		data.items
 			.filter((item: any) => {
-				let typeMatch = true;
-				if (activeFilter === 'ITEMS') typeMatch = item.listing.type === 'ITEM';
-				if (activeFilter === 'SERVICES') typeMatch = item.listing.type === 'SERVICE';
+				// Every listing is one or the other, so the two tabs partition the feed
+				// with nothing stranded between them.
+				const typeMatch =
+					category === 'ITEMS' ? item.listing.type === 'ITEM' : item.listing.type === 'SERVICE';
 
 				let categoryMatch = true;
 				if (activeCategory) {
@@ -90,13 +94,19 @@
 			.sort(byDistance)
 	);
 
-	// Derives from filteredItems, so the type/category/search filters and the
-	// distances computed for the sort all carry through for free.
-	let groupedItems = $derived(groupByTitle(filteredItems));
+	// Derives from filteredItems, so the type/category/search filters carry
+	// through for free and the counts always match what the All view lists.
+	let groupedItems = $derived(groupByCategory(filteredItems));
 
-	function setFilter(filter: string) {
-		activeFilter = filter;
-	}
+	// The grouped view is a summary of one type, so its noun follows the tab.
+	let groupedLabel = $derived(
+		category === 'ITEMS' ? 'Összes tárgy listája' : 'Összes esemény listája'
+	);
+	let emptyLabel = $derived(
+		category === 'ITEMS'
+			? 'Jelenleg nincs tárgy ebben a kategóriában.'
+			: 'Jelenleg nincs szolgáltatás ebben a kategóriában.'
+	);
 </script>
 
 <svelte:head>
@@ -121,90 +131,84 @@
 	</div>
 
 	{#if mode === 'LISTINGS'}
-		<!-- Tárgyak / Összes tárgy listája sub-view. Only meaningful under
-		     Hirdetések, so it lives inside this branch. -->
+		<!-- Tárgyak / Szolgáltatások-Események. Only meaningful under Hirdetések,
+		     so it lives inside this branch. -->
 		<div class="flex gap-2">
 			<button
-				onclick={() => (subView = 'ITEMS')}
-				class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors border {subView === 'ITEMS'
+				onclick={() => (category = 'ITEMS')}
+				class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors border {category === 'ITEMS'
 					? 'bg-blue-600 text-white border-blue-600'
 					: 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}"
 			>
 				Tárgyak
 			</button>
 			<button
-				onclick={() => (subView = 'GROUPED')}
-				class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors border {subView === 'GROUPED'
+				onclick={() => (category = 'SERVICES')}
+				class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors border {category === 'SERVICES'
 					? 'bg-blue-600 text-white border-blue-600'
 					: 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}"
 			>
-				Összes tárgy listája
+				Szolgáltatások/Események
 			</button>
 		</div>
 
-		<!-- Filter/Tabs. Shown for both sub-views: it filters the same underlying
-		     set the grouped summary is built from. -->
+		<!-- Összes / grouped list. Both tabs offer the same pair of views, so this
+		     row is shared rather than duplicated per tab. -->
 		<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
 			<button
-				onclick={() => setFilter('ALL')}
-				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors {activeFilter === 'ALL' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+				onclick={() => (view = 'ALL')}
+				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors {view === 'ALL' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}"
 			>
-				All
+				Összes
 			</button>
 			<button
-				onclick={() => setFilter('ITEMS')}
-				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors {activeFilter === 'ITEMS' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+				onclick={() => (view = 'GROUPED')}
+				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors {view === 'GROUPED' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}"
 			>
-				Items
-			</button>
-			<button
-				onclick={() => setFilter('SERVICES')}
-				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors {activeFilter === 'SERVICES' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}"
-			>
-				Services
+				{groupedLabel}
 			</button>
 		</div>
 
-		{#if subView === 'GROUPED'}
-			<!-- Summarized: one row per distinct item name, with how many are up. -->
-			<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-				{#if groupedItems.length === 0}
-					<div class="text-center py-12 text-gray-500">
-						<p>No listings found in this category.</p>
-					</div>
-				{:else}
-					<div class="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-						<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tárgy</h2>
-						<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Elérhető</h2>
-					</div>
-					<ul class="divide-y divide-gray-100">
-						{#each groupedItems as group (group.title.toLowerCase())}
-							<li class="px-4 py-3 flex items-center justify-between gap-3">
-								<div class="min-w-0">
-									<p class="font-semibold text-gray-900 truncate">{group.title}</p>
-									{#if group.nearestKm != null}
-										<p class="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-											<MapPin class="w-3 h-3 shrink-0" />
-											<span>legközelebbi: <span class="font-semibold text-blue-600">{formatDistance(group.nearestKm)}</span></span>
-										</p>
-									{/if}
-								</div>
-								<span
-									class="shrink-0 min-w-[2.25rem] text-center text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full"
-								>
-									({group.count})
-								</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</div>
+		{#if view === 'GROUPED'}
+			<!-- Summarized: one cell per category, with how many are up. -->
+			{#if groupedItems.length === 0}
+				<div class="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-gray-500">
+					<p>{emptyLabel}</p>
+				</div>
+			{:else}
+				<div class="grid grid-cols-2 gap-x-3 gap-y-1">
+					{#each groupedItems as group (group.category.toLowerCase())}
+						{@const Icon = categoryIcon(group.category)}
+						<div class="flex items-center gap-3 py-2.5">
+							<!-- Hexagon outline behind the glyph. An SVG rather than a
+							     clip-path: clipping can't render a border, only a filled
+							     silhouette. aria-hidden - the label beside it already says
+							     which category this is. -->
+							<div class="relative w-11 h-11 shrink-0 flex items-center justify-center">
+								<svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full text-gray-300" aria-hidden="true">
+									<polygon
+										points="50,3 93,27 93,73 50,97 7,73 7,27"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="5"
+									/>
+								</svg>
+								<Icon class="relative w-5 h-5 text-gray-500" />
+							</div>
+							<p class="min-w-0 text-gray-800 leading-snug">
+								<span class="break-words">{group.category}</span>
+								<span class="font-bold text-gray-900 whitespace-nowrap">({group.count})</span>
+							</p>
+						</div>
+					{/each}
+				</div>
+			{/if}
 		{:else}
 			<!-- Feed -->
 			<div class="space-y-6">
 				{#if filteredItems.length === 0}
 					<div class="text-center py-12 text-gray-500">
-						<p>No listings found in this category.</p>
+						<p>{emptyLabel}</p>
 					</div>
 				{:else}
 					{#each filteredItems as item (item.listing.id)}

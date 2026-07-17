@@ -7,18 +7,25 @@
 	import { getUserProfile } from '$lib/data/users';
 	import { getReviewsForUser } from '$lib/data/reviews';
 	import { getListingsByOwner } from '$lib/data/listings';
-	import { Star, Pencil, Home, Package } from 'lucide-svelte';
+	import { getWantsByRequester } from '$lib/data/wants';
+	import { Star, Pencil, Home, Package, Search, ChevronDown } from 'lucide-svelte';
 	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
 	import RequestModal from '$lib/components/RequestModal.svelte';
-	import type { User, Review, Listing } from '$lib/types';
+	import WantCard from '$lib/components/WantCard.svelte';
+	import type { User, Review, Listing, Want } from '$lib/types';
 
 	let loading = $state(true);
 	let notFound = $state(false);
 	let profile = $state<User | null>(null);
 	let reviews = $state<Review[]>([]);
 	let listings = $state<Listing[]>([]);
+	let wants = $state<Want[]>([]);
 	let isEditOpen = $state(false);
 	let requestListing = $state<Listing | null>(null);
+
+	// Which of the three sections are rolled down. Reviews starts open so the
+	// page never lands on three collapsed bars with nothing to read.
+	let open = $state({ reviews: true, listings: false, wants: false });
 
 	// Only the owner ever sees the precise address. Everything rendered outside
 	// this guard is fair game for strangers, so keep address inside it.
@@ -50,10 +57,11 @@
 				loading = false;
 				return;
 			}
-			const [userProfile, userReviews, userListings] = await Promise.all([
+			const [userProfile, userReviews, userListings, userWants] = await Promise.all([
 				getUserProfile(id),
 				getReviewsForUser(id),
-				getListingsByOwner(id)
+				getListingsByOwner(id),
+				getWantsByRequester(id)
 			]);
 			if (!userProfile) {
 				notFound = true;
@@ -63,6 +71,7 @@
 			profile = userProfile;
 			reviews = userReviews;
 			listings = userListings;
+			wants = userWants;
 			loading = false;
 		})();
 	});
@@ -71,6 +80,36 @@
 <svelte:head>
 	<title>{profile?.name ?? 'Profil'} - Sharespace</title>
 </svelte:head>
+
+<!--
+	The clickable bar for one rolled-up section. Shared by all three so the hit
+	area, chevron and count can't drift apart as they're edited individually.
+	aria-expanded is what tells a screen reader this toggles rather than
+	navigates; the chevron alone says nothing.
+-->
+{#snippet sectionHead(
+	label: string,
+	count: number,
+	isOpen: boolean,
+	toggle: () => void,
+	Icon: typeof Package
+)}
+	<button
+		type="button"
+		onclick={toggle}
+		aria-expanded={isOpen}
+		class="w-full flex items-center gap-2 p-4 text-left hover:bg-gray-50 transition-colors"
+	>
+		<Icon class="w-5 h-5 text-blue-600 shrink-0" />
+		<h2 class="text-lg font-bold text-gray-900">{label}</h2>
+		<span class="text-sm font-semibold text-gray-400">({count})</span>
+		<ChevronDown
+			class="w-5 h-5 text-gray-400 ml-auto shrink-0 transition-transform duration-200 {isOpen
+				? 'rotate-180'
+				: ''}"
+		/>
+	</button>
+{/snippet}
 
 <div class="max-w-2xl mx-auto">
 	{#if loading}
@@ -116,90 +155,140 @@
 		</div>
 
 		<div class="mt-6 space-y-3">
-			<h2 class="text-lg font-bold text-gray-900">Értékelések</h2>
-			{#if reviews.length === 0}
-				<p class="text-sm text-gray-500">Még nincs értékelése.</p>
-			{:else}
-				{#each reviews as review (review.id)}
-					<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-						<div class="flex items-center justify-between gap-3">
-							<a href={`/profile/${review.reviewer_id}`} class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
-								<img
-									src={review.reviewer_avatar_url}
-									alt={review.reviewer_name}
-									class="w-9 h-9 rounded-full object-cover bg-gray-100 flex-shrink-0"
-								/>
-								<span class="font-semibold text-gray-900 truncate">{review.reviewer_name}</span>
-							</a>
-							<span class="text-xs text-gray-400 whitespace-nowrap">{formatDate(review.created_at)}</span>
-						</div>
-						<div class="flex gap-0.5 mt-2">
-							{#each Array(5) as _, i}
-								<Star class="w-4 h-4 {i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}" />
-							{/each}
-						</div>
-						{#if review.content}
-							<p class="text-sm text-gray-600 mt-2">{review.content}</p>
+			<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+				{@render sectionHead(
+					'Értékelések',
+					reviews.length,
+					open.reviews,
+					() => (open.reviews = !open.reviews),
+					Star
+				)}
+				{#if open.reviews}
+					<div class="border-t border-gray-100">
+						{#if reviews.length === 0}
+							<p class="text-sm text-gray-500 p-4">Még nincs értékelése.</p>
+						{:else}
+							<!-- Divided rows rather than nested cards: these already sit inside
+							     the section's own white card. -->
+							<ul class="divide-y divide-gray-100">
+								{#each reviews as review (review.id)}
+									<li class="p-4">
+										<div class="flex items-center justify-between gap-3">
+											<a
+												href={`/profile/${review.reviewer_id}`}
+												class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
+											>
+												<img
+													src={review.reviewer_avatar_url}
+													alt={review.reviewer_name}
+													class="w-9 h-9 rounded-full object-cover bg-gray-100 flex-shrink-0"
+												/>
+												<span class="font-semibold text-gray-900 truncate">{review.reviewer_name}</span>
+											</a>
+											<span class="text-xs text-gray-400 whitespace-nowrap">{formatDate(review.created_at)}</span>
+										</div>
+										<div class="flex gap-0.5 mt-2">
+											{#each Array(5) as _, i}
+												<Star class="w-4 h-4 {i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}" />
+											{/each}
+										</div>
+										{#if review.content}
+											<p class="text-sm text-gray-600 mt-2">{review.content}</p>
+										{/if}
+									</li>
+								{/each}
+							</ul>
 						{/if}
 					</div>
-				{/each}
-			{/if}
-		</div>
+				{/if}
+			</div>
 
-		<!-- What this person currently has up. Only AVAILABLE listings: an
-		     UNAVAILABLE one isn't something a visitor can act on. -->
-		<div class="mt-6 space-y-3">
-			<h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-				<Package class="w-5 h-5 text-blue-600" />
-				{isOwnProfile ? 'Amit megosztasz' : 'Amit megoszt'}
-				<span class="text-sm font-semibold text-gray-400">({listings.length})</span>
-			</h2>
+			<!-- What this person currently has up. Only AVAILABLE listings: an
+			     UNAVAILABLE one isn't something a visitor can act on. -->
+			<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+				{@render sectionHead(
+					isOwnProfile ? 'Hirdetéseid' : 'Hirdetései',
+					listings.length,
+					open.listings,
+					() => (open.listings = !open.listings),
+					Package
+				)}
+				{#if open.listings}
+					<div class="border-t border-gray-100 p-4">
+						{#if listings.length === 0}
+							<p class="text-sm text-gray-500">
+								{isOwnProfile ? 'Még nincs aktív hirdetésed.' : 'Jelenleg nincs aktív hirdetése.'}
+							</p>
+						{:else}
+							<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+								{#each listings as listing (listing.id)}
+									<!-- There's no listing detail route, so the card opens the same
+									     RequestModal the feed uses. On your own profile there's
+									     nothing to request, so it stays a plain tile. -->
+									<!-- role is redundant on a real <button>, but svelte:element is
+									     dynamic so static analysis can't tell what `this` resolves to. -->
+									<svelte:element
+										this={isOwnProfile ? 'div' : 'button'}
+										role={isOwnProfile ? undefined : 'button'}
+										onclick={isOwnProfile ? undefined : () => (requestListing = listing)}
+										class="text-left bg-white rounded-2xl border border-gray-100 overflow-hidden {isOwnProfile
+											? ''
+											: 'hover:shadow-md hover:border-blue-200 transition-all'}"
+									>
+										<div class="aspect-square w-full bg-gray-100 overflow-hidden">
+											<img
+												src={listing.image_url}
+												alt={listing.title}
+												class="w-full h-full object-cover"
+												loading="lazy"
+											/>
+										</div>
+										<div class="p-2.5">
+											<p class="text-sm font-semibold text-gray-900 truncate">{listing.title}</p>
+											<div class="flex items-center justify-between gap-1 mt-1">
+												{#if listing.category}
+													<span class="text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full truncate">
+														{listing.category}
+													</span>
+												{/if}
+												{#if listing.price_range}
+													<span class="text-[10px] font-bold text-green-700 whitespace-nowrap">{listing.price_range}</span>
+												{/if}
+											</div>
+										</div>
+									</svelte:element>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
 
-			{#if listings.length === 0}
-				<p class="text-sm text-gray-500">
-					{isOwnProfile ? 'Még nincs aktív hirdetésed.' : 'Jelenleg nincs aktív hirdetése.'}
-				</p>
-			{:else}
-				<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-					{#each listings as listing (listing.id)}
-						<!-- There's no listing detail route, so the card opens the same
-						     RequestModal the feed uses. On your own profile there's nothing
-						     to request, so it stays a plain tile. -->
-						<!-- role is redundant on a real <button>, but svelte:element is
-						     dynamic so static analysis can't tell what `this` resolves to. -->
-						<svelte:element
-							this={isOwnProfile ? 'div' : 'button'}
-							role={isOwnProfile ? undefined : 'button'}
-							onclick={isOwnProfile ? undefined : () => (requestListing = listing)}
-							class="text-left bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden {isOwnProfile
-								? ''
-								: 'hover:shadow-md hover:border-blue-200 transition-all'}"
-						>
-							<div class="aspect-square w-full bg-gray-100 overflow-hidden">
-								<img
-									src={listing.image_url}
-									alt={listing.title}
-									class="w-full h-full object-cover"
-									loading="lazy"
-								/>
-							</div>
-							<div class="p-2.5">
-								<p class="text-sm font-semibold text-gray-900 truncate">{listing.title}</p>
-								<div class="flex items-center justify-between gap-1 mt-1">
-									{#if listing.category}
-										<span class="text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full truncate">
-											{listing.category}
-										</span>
-									{/if}
-									{#if listing.price_range}
-										<span class="text-[10px] font-bold text-green-700 whitespace-nowrap">{listing.price_range}</span>
-									{/if}
-								</div>
-							</div>
-						</svelte:element>
-					{/each}
-				</div>
-			{/if}
+			<!-- Igények: the inverse of the listings above - what this person is
+			     looking for. Reuses the feed's WantCard so the offer flow, the
+			     "Saját igényed" guard and the styling stay in one place. -->
+			<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+				{@render sectionHead(
+					isOwnProfile ? 'Igényeid' : 'Igényei',
+					wants.length,
+					open.wants,
+					() => (open.wants = !open.wants),
+					Search
+				)}
+				{#if open.wants}
+					<div class="border-t border-gray-100 p-4 space-y-3">
+						{#if wants.length === 0}
+							<p class="text-sm text-gray-500">
+								{isOwnProfile ? 'Még nincs igényed.' : 'Jelenleg nincs igénye.'}
+							</p>
+						{:else}
+							{#each wants as want (want.id)}
+								<WantCard {want} currentUser={$currentUser} />
+							{/each}
+						{/if}
+					</div>
+				{/if}
+			</div>
 		</div>
 
 		<!-- Mounted only while open, so the form re-seeds from the current profile

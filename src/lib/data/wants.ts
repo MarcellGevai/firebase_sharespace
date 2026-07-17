@@ -1,8 +1,9 @@
 // "Wants" (Igények) live in /wants/{autoId} - the inverse of a listing: someone
 // posting that they're looking for an item/service, rather than offering one.
 // A separate collection from /requests (the deal/handover state machine).
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
+import { createdMs } from '../timestamps';
 import type { User, Want } from '../types';
 
 export type NewWant = {
@@ -43,4 +44,18 @@ export async function getAvailableWants(): Promise<Want[]> {
 	const q = query(collection(db, 'wants'), orderBy('created_at', 'desc'));
 	const snap = await getDocs(q);
 	return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Want, 'id'>) }));
+}
+
+/**
+ * Every want posted by one person, newest first.
+ *
+ * Sorted client-side rather than with orderBy: pairing it with the where()
+ * would demand a composite index for what is only ever a handful of docs.
+ * getListingsByOwner does the same for the same reason.
+ */
+export async function getWantsByRequester(requesterId: string): Promise<Want[]> {
+	const snap = await getDocs(query(collection(db, 'wants'), where('requester_id', '==', requesterId)));
+	return snap.docs
+		.sort((a, b) => createdMs(b.data().created_at) - createdMs(a.data().created_at))
+		.map((d) => ({ id: d.id, ...(d.data() as Omit<Want, 'id'>) }));
 }

@@ -13,6 +13,7 @@ import {
 	writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { createdMs } from '../timestamps';
 import type { Listing, ListingType } from '../types';
 import type { User } from '../types';
 
@@ -96,15 +97,6 @@ export async function syncOwnerLocationToListings(
 
 function toListing(id: string, d: Record<string, unknown>): Listing {
 	return { id, ...(d as Omit<Listing, 'id'>) };
-}
-
-/** Firestore Timestamp -> epoch ms, tolerant of the shapes seen across the app. */
-function createdMs(ts: unknown): number {
-	const t = ts as { toMillis?: () => number; seconds?: number } | null | undefined;
-	if (!t) return 0;
-	if (typeof t.toMillis === 'function') return t.toMillis();
-	if (typeof t.seconds === 'number') return t.seconds * 1000;
-	return 0;
 }
 
 /**

@@ -10,7 +10,7 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"deploy": "npm run build && firebase deploy --only hosting",
+		"deploy": "npm run build && firebase deploy --only hosting,storage,firestore",
 		"deploy:all": "npm run build && firebase deploy"
 	},
 	"devDependencies": {

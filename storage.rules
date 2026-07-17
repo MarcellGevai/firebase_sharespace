@@ -1,15 +1,20 @@
 rules_version = '2';
 
 // Listing images. Anyone can view them (public marketplace); a user may only
-// write into their own folder, images only, max 5 MB — the same limits the old
-// /api/upload endpoint enforced.
+// write into their own folder, images only.
+//
+// The cap was 5 MB, inherited from the old /api/upload endpoint. That's below
+// what a phone camera produces, and a rejection here reaches the client as a
+// bare storage/unauthorized - indistinguishable from "you're not logged in" -
+// so an ordinary photo looked like a permissions bug. 15 MB clears current
+// handset output with room to spare.
 service firebase.storage {
 	match /b/{bucket}/o {
 		match /listings/{userId}/{fileName} {
 			allow read: if true;
 			allow write: if request.auth != null
 				&& request.auth.uid == userId
-				&& request.resource.size < 5 * 1024 * 1024
+				&& request.resource.size < 15 * 1024 * 1024
 				&& request.resource.contentType.matches('image/.*');
 		}
 	}

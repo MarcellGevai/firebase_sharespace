@@ -24,9 +24,9 @@
 	let completedRentals = $state<RentalRow[]>([]);
 	let now = $state(Date.now());
 
-	// Active starts rolled down: it's the half you'd open the page to check.
-	// Closed rentals are history and stay out of the way until asked for.
-	let openActive = $state(true);
+	// Both start rolled up. Expanding is the reader's choice to make, and a
+	// section that opens on arrival isn't a choice they made.
+	let openActive = $state(false);
 	let openCompleted = $state(false);
 
 	// Firestore Timestamp -> epoch ms, tolerant of the shapes seen across the app

@@ -25,9 +25,10 @@
 	let isEditOpen = $state(false);
 	let requestListing = $state<Listing | null>(null);
 
-	// Which of the three sections are rolled down. Reviews starts open so the
-	// page never lands on three collapsed bars with nothing to read.
-	let open = $state({ reviews: true, listings: false, wants: false });
+	// Which of the three sections are rolled down. All start closed: opening one
+	// is the reader's choice, and a section that expands on arrival isn't a
+	// choice they made.
+	let open = $state({ reviews: false, listings: false, wants: false });
 
 	// Only the owner ever sees the precise address. Everything rendered outside
 	// this guard is fair game for strangers, so keep address inside it.

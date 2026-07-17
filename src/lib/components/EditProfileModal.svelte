@@ -3,8 +3,8 @@
 	import { X, MapPin, TriangleAlert } from 'lucide-svelte';
 	import { geocodeAddress } from '$lib/geocode';
 	import { updateUserProfile } from '$lib/data/users';
-	import { syncOwnerLocationToListings, syncOwnerNameToListings } from '$lib/data/listings';
-	import { syncRequesterNameToWants } from '$lib/data/wants';
+	import { syncOwnerSnapshotToListings } from '$lib/data/listings';
+	import { syncRequesterSnapshotToWants } from '$lib/data/wants';
 	import { changeUsername } from '$lib/data/usernames';
 	import { validateUsername, displayName } from '$lib/username';
 	import { updateAccountEmail, hasPasswordProvider, refreshProfile, authErrorMessage } from '$lib/auth';
@@ -102,26 +102,26 @@
 			// Listings carry a snapshot of the owner's public locality, and /listings
 			// is world-readable - a stale snapshot would keep the old value visible.
 			// Best-effort: a failure must not lose the profile save above.
-			if (nextLocation !== (profile.location ?? '')) {
-				await syncOwnerLocationToListings(profile.id, nextLocation).catch((e) =>
-					console.error('owner_location sync failed', e)
-				);
-			}
-
-			// Listings and wants both snapshot the owner's handle, and both are
-			// world-readable - a rename that skipped this would leave the old handle
-			// on show across the feed. Best-effort, same as the locality sync.
-			if (usernameChanged) {
-				const shown = displayName({ username: username.trim(), name: name.trim() });
-				await Promise.all([
-					syncOwnerNameToListings(profile.id, shown).catch((e) =>
-						console.error('owner_name sync failed', e)
-					),
-					syncRequesterNameToWants(profile.id, shown).catch((e) =>
-						console.error('requester_name sync failed', e)
-					)
-				]);
-			}
+			// Listings and wants keep their own copy of the owner's locality and
+			// handle, and both collections are world-readable - a change that skipped
+			// this would leave the old values on show across the feed. Batched into
+			// one pass per collection, and best-effort: a failure here must not lose
+			// the profile save above.
+			const shown = displayName({ username: username.trim(), name: name.trim() });
+			const listingFields = {
+				...(nextLocation !== (profile.location ?? '') ? { owner_location: nextLocation } : {}),
+				...(usernameChanged ? { owner_name: shown } : {})
+			};
+			await Promise.all([
+				syncOwnerSnapshotToListings(profile.id, listingFields).catch((e) =>
+					console.error('owner snapshot sync failed', e)
+				),
+				usernameChanged
+					? syncRequesterSnapshotToWants(profile.id, { requester_name: shown }).catch((e) =>
+							console.error('requester snapshot sync failed', e)
+						)
+					: Promise.resolve(0)
+			]);
 
 			await refreshProfile();
 			submitting = false;

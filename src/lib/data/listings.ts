@@ -71,46 +71,41 @@ export async function createListing(owner: User, data: NewListing): Promise<stri
 	return ref.id;
 }
 
+/** The owner fields /listings keeps its own copy of. */
+export type OwnerSnapshot = Partial<
+	Pick<Listing, 'owner_name' | 'owner_avatar_url' | 'owner_location'>
+>;
+
 /**
- * Push the owner's current public locality onto every listing they own.
+ * Push changed owner fields onto every listing they own.
  *
- * `owner_location` is a snapshot taken at creation time, and /listings is world
- * readable - so a stale copy of an old, address-shaped `location` would stay
- * publicly visible no matter what the /users doc says. Callers run this whenever
- * the owner's location changes. Rules permit it: each write targets a doc whose
- * owner_id is the caller.
+ * Each of these is a snapshot taken at creation time, and /listings is world
+ * readable - so a stale copy stays publicly visible no matter what the /users
+ * doc says. Callers run this whenever the owner changes one. Rules permit it:
+ * every write targets a doc whose owner_id is the caller.
+ *
+ * Only docs that actually disagree are written, so passing fields that didn't
+ * change costs one query and no writes.
  *
  * Best-effort by design: a failure here must not fail the profile save, but it
- * does mean the listings keep the old value until the next attempt.
+ * does mean the listings keep the old values until the next attempt.
  */
-export async function syncOwnerLocationToListings(
+export async function syncOwnerSnapshotToListings(
 	ownerId: string,
-	location: string
+	fields: OwnerSnapshot
 ): Promise<number> {
+	const entries = Object.entries(fields);
+	if (entries.length === 0) return 0;
+
 	const snap = await getDocs(query(collection(db, 'listings'), where('owner_id', '==', ownerId)));
-	const stale = snap.docs.filter((d) => d.data().owner_location !== location);
+	const stale = snap.docs.filter((d) => {
+		const data = d.data();
+		return entries.some(([k, v]) => data[k] !== v);
+	});
 	if (stale.length === 0) return 0;
 
 	const batch = writeBatch(db);
-	for (const d of stale) batch.update(d.ref, { owner_location: location });
-	await batch.commit();
-	return stale.length;
-}
-
-/**
- * Same idea for the owner's public handle: /listings carries a snapshot of it,
- * so renaming without this leaves the old handle on show across the feed.
- *
- * Best-effort like its sibling above - a failure must not fail the profile save,
- * but the listings then keep the old name until the next attempt.
- */
-export async function syncOwnerNameToListings(ownerId: string, name: string): Promise<number> {
-	const snap = await getDocs(query(collection(db, 'listings'), where('owner_id', '==', ownerId)));
-	const stale = snap.docs.filter((d) => d.data().owner_name !== name);
-	if (stale.length === 0) return 0;
-
-	const batch = writeBatch(db);
-	for (const d of stale) batch.update(d.ref, { owner_name: name });
+	for (const d of stale) batch.update(d.ref, fields);
 	await batch.commit();
 	return stale.length;
 }

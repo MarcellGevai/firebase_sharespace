@@ -4,16 +4,25 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { currentUser } from '$lib/auth';
-	import { getUserProfile } from '$lib/data/users';
+	import { getUserProfile, setProfileAvatar } from '$lib/data/users';
 	import { getReviewsForUser } from '$lib/data/reviews';
 	import { getListingsByOwner } from '$lib/data/listings';
-	import { getWantsByRequester } from '$lib/data/wants';
-	import { Star, Pencil, Home, Package, Search } from 'lucide-svelte';
+	import { getWantsByRequester, syncRequesterSnapshotToWants } from '$lib/data/wants';
+	import { syncOwnerSnapshotToListings } from '$lib/data/listings';
+	import { refreshProfile } from '$lib/auth';
+	import { Star, Pencil, Home, Package, Search, Dices, Check, X } from 'lucide-svelte';
 	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
 	import RequestModal from '$lib/components/RequestModal.svelte';
 	import WantCard from '$lib/components/WantCard.svelte';
 	import CollapsibleSection from '$lib/components/CollapsibleSection.svelte';
 	import { displayName } from '$lib/username';
+	import {
+		AVATAR_STYLES,
+		avatarUrlFor,
+		avatarStyleOf,
+		randomAvatarSeed,
+		type AvatarStyle
+	} from '$lib/avatar';
 	import type { User, Review, Listing, Want } from '$lib/types';
 
 	let loading = $state(true);
@@ -24,6 +33,63 @@
 	let wants = $state<Want[]>([]);
 	let isEditOpen = $state(false);
 	let requestListing = $state<Listing | null>(null);
+
+	// Avatar picker. `draft` is a local preview only - nothing is written until
+	// the user confirms, because saving fans out to every listing and want they
+	// own, and re-rolling the dice is meant to be free.
+	let avatarOpen = $state(false);
+	let avatarDraft = $state<string | null>(null);
+	let avatarStyle = $state<AvatarStyle>('bottts');
+	let avatarSaving = $state(false);
+	let avatarError = $state('');
+
+	function openAvatarPicker() {
+		avatarStyle = avatarStyleOf(profile?.avatar_url);
+		avatarDraft = null;
+		avatarError = '';
+		avatarOpen = true;
+	}
+
+	/** New face, same collection. */
+	function rollAvatar() {
+		avatarDraft = avatarUrlFor(avatarStyle, randomAvatarSeed());
+	}
+
+	/** Switching collection re-rolls too: an unchanged face under a new style
+	 *  would look like the button did nothing. */
+	function pickStyle(style: AvatarStyle) {
+		avatarStyle = style;
+		rollAvatar();
+	}
+
+	async function saveAvatar() {
+		if (!profile || !avatarDraft) return;
+		avatarSaving = true;
+		avatarError = '';
+		try {
+			await setProfileAvatar(profile.id, avatarDraft);
+			// Listings and wants each hold their own copy of the face, and both are
+			// world-readable - skipping this leaves the old avatar across the feed.
+			// Best-effort, matching how the profile edit handles the same problem.
+			await Promise.all([
+				syncOwnerSnapshotToListings(profile.id, { owner_avatar_url: avatarDraft }).catch((e) =>
+					console.error('owner avatar sync failed', e)
+				),
+				syncRequesterSnapshotToWants(profile.id, { requester_avatar_url: avatarDraft }).catch((e) =>
+					console.error('requester avatar sync failed', e)
+				)
+			]);
+			profile = { ...profile, avatar_url: avatarDraft };
+			await refreshProfile();
+			avatarOpen = false;
+			avatarDraft = null;
+		} catch (e) {
+			console.error(e);
+			avatarError = 'Az avatar mentése nem sikerült.';
+		} finally {
+			avatarSaving = false;
+		}
+	}
 
 	// Which of the three sections are rolled down. All start closed: opening one
 	// is the reader's choice, and a section that expands on arrival isn't a
@@ -104,7 +170,70 @@
 			{/if}
 
 			<div class="flex flex-col items-center text-center">
-				<img src={profile.avatar_url} alt={displayName(profile)} class="w-24 h-24 rounded-full object-cover bg-raised mb-4" />
+				<!-- The draft face replaces the real one while the picker is open, so
+				     you judge it at the size it will actually be worn. -->
+				<img
+					src={avatarDraft ?? profile.avatar_url}
+					alt={displayName(profile)}
+					class="w-24 h-24 rounded-full object-cover bg-raised mb-4"
+				/>
+
+				{#if isOwnProfile}
+					{#if !avatarOpen}
+						<button onclick={openAvatarPicker} class="btn btn-secondary mb-4 !py-1.5 !px-3 text-xs">
+							<Dices class="w-4 h-4" /> Új avatar generálása
+						</button>
+					{:else}
+						<div class="w-full mb-4 p-3 rounded-2xl border border-line bg-raised">
+							<div class="flex flex-wrap justify-center gap-1.5">
+								{#each AVATAR_STYLES as style (style.id)}
+									<button
+										onclick={() => pickStyle(style.id)}
+										aria-pressed={avatarStyle === style.id}
+										class="px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors {avatarStyle ===
+										style.id
+											? 'bg-primary-soft text-primary border-primary'
+											: 'bg-surface text-muted border-line hover:bg-raised'}"
+									>
+										{style.label}
+									</button>
+								{/each}
+							</div>
+
+							<div class="flex items-center justify-center gap-2 mt-3">
+								<button onclick={rollAvatar} class="btn btn-secondary !py-1.5 !px-3 text-xs">
+									<Dices class="w-4 h-4" /> Dobj egyet
+								</button>
+								<button
+									onclick={saveAvatar}
+									disabled={!avatarDraft || avatarSaving}
+									class="btn btn-primary !py-1.5 !px-3 text-xs"
+								>
+									<Check class="w-4 h-4" />
+									{avatarSaving ? 'Mentés...' : 'Mentés'}
+								</button>
+								<button
+									onclick={() => {
+										avatarOpen = false;
+										avatarDraft = null;
+									}}
+									class="btn btn-ghost !py-1.5 !px-3 text-xs"
+								>
+									<X class="w-4 h-4" /> Mégsem
+								</button>
+							</div>
+
+							{#if avatarError}
+								<p class="text-xs text-danger mt-2">{avatarError}</p>
+							{:else if !avatarDraft}
+								<p class="text-xs text-faint mt-2">
+									Válassz stílust, vagy dobj egyet – a mentésig semmi nem változik.
+								</p>
+							{/if}
+						</div>
+					{/if}
+				{/if}
+
 				<h1 class="text-2xl font-bold text-ink">{displayName(profile)}</h1>
 				<!-- Owner-only, like the address below: the legal name is not public. -->
 				{#if isOwnProfile && profile.name}

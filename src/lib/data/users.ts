@@ -90,6 +90,11 @@ export async function setProfileLocation(uid: string, location: string): Promise
 	await updateDoc(doc(db, 'users', uid), { location });
 }
 
+/** Narrow write for the profile's avatar generator. */
+export async function setProfileAvatar(uid: string, avatar_url: string): Promise<void> {
+	await updateDoc(doc(db, 'users', uid), { avatar_url });
+}
+
 /**
  * Fold a new star rating into the reviewee's aggregate. Runs in a transaction so
  * concurrent reviews can't clobber each other. Only the three rating fields are

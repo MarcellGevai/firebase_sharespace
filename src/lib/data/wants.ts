@@ -57,18 +57,30 @@ export async function getAvailableWants(): Promise<Want[]> {
 	return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Want, 'id'>) }));
 }
 
+/** The requester fields /wants keeps its own copy of. */
+export type RequesterSnapshot = Partial<Pick<Want, 'requester_name' | 'requester_avatar_url'>>;
+
 /**
- * Refresh the requester's handle on their own wants after a rename. /wants
- * carries a snapshot of it and is world-readable, so without this the old
- * handle stays on show. Best-effort, like the listings equivalent.
+ * Refresh changed requester fields on their own wants. /wants carries a snapshot
+ * of them and is world-readable, so without this the old handle or face stays on
+ * show. Mirrors syncOwnerSnapshotToListings, including being best-effort.
  */
-export async function syncRequesterNameToWants(requesterId: string, name: string): Promise<number> {
+export async function syncRequesterSnapshotToWants(
+	requesterId: string,
+	fields: RequesterSnapshot
+): Promise<number> {
+	const entries = Object.entries(fields);
+	if (entries.length === 0) return 0;
+
 	const snap = await getDocs(query(collection(db, 'wants'), where('requester_id', '==', requesterId)));
-	const stale = snap.docs.filter((d) => d.data().requester_name !== name);
+	const stale = snap.docs.filter((d) => {
+		const data = d.data();
+		return entries.some(([k, v]) => data[k] !== v);
+	});
 	if (stale.length === 0) return 0;
 
 	const batch = writeBatch(db);
-	for (const d of stale) batch.update(d.ref, { requester_name: name });
+	for (const d of stale) batch.update(d.ref, fields);
 	await batch.commit();
 	return stale.length;
 }

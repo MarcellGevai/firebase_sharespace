@@ -24,7 +24,7 @@ import {
 	setProfileEmail,
 	setProfileLocation
 } from './data/users';
-import { syncOwnerLocationToListings } from './data/listings';
+import { syncOwnerSnapshotToListings } from './data/listings';
 import { isUsernameAvailable, claimUsername, UsernameTakenError } from './data/usernames';
 import type { User } from './types';
 
@@ -108,7 +108,7 @@ async function healLeakedLocation(profile: User): Promise<void> {
 	const coords = await geocodeAddress(profile.address).catch(() => null);
 	if (!coords?.locality) return;
 	await setProfileLocation(profile.id, coords.locality);
-	await syncOwnerLocationToListings(profile.id, coords.locality).catch((e) =>
+	await syncOwnerSnapshotToListings(profile.id, { owner_location: coords.locality }).catch((e) =>
 		console.error('owner_location heal failed', e)
 	);
 	profile.location = coords.locality;

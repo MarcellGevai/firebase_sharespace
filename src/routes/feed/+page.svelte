@@ -8,9 +8,12 @@
 	import type { PageData } from './$types';
 	import { page } from '$app/stores';
 	import { Package, Search, ChevronDown } from 'lucide-svelte';
-	import { distanceKmTo, byDistance, type Coords } from '$lib/distance';
+	import { distanceKmTo, type Coords } from '$lib/distance';
+	import { createdMs } from '$lib/timestamps';
 	import { groupByCategory } from '$lib/grouping';
 	import { categoryIcon, NO_SUBCATEGORY } from '$lib/categories';
+	import SortMenu from '$lib/components/SortMenu.svelte';
+	import { compareBy, listingPriceRank, DEFAULT_SORT, type SortKey } from '$lib/sorting';
 
 	let { data }: { data: PageData } = $props();
 
@@ -48,6 +51,11 @@
 		);
 	});
 
+	// One choice per list, so switching tab doesn't silently reorder the other -
+	// "cheapest" means different things to a listing and to a want.
+	let itemSort = $state<SortKey>(DEFAULT_SORT);
+	let wantSort = $state<SortKey>(DEFAULT_SORT);
+
 	let filteredItems = $derived(
 		data.items
 			.filter((item: any) => {
@@ -70,9 +78,11 @@
 			})
 			.map((item: any) => ({
 				...item,
-				distanceKm: distanceKmTo(baseline, item.listing.latitude, item.listing.longitude)
+				distanceKm: distanceKmTo(baseline, item.listing.latitude, item.listing.longitude),
+				createdMs: createdMs(item.listing.created_at),
+				priceRank: listingPriceRank(item.listing.price_range)
 			}))
-			.sort(byDistance)
+			.sort(compareBy(itemSort))
 	);
 
 	let filteredWants = $derived(
@@ -92,9 +102,13 @@
 			})
 			.map((want: any) => ({
 				want,
-				distanceKm: distanceKmTo(baseline, want.latitude, want.longitude)
+				distanceKm: distanceKmTo(baseline, want.latitude, want.longitude),
+				createdMs: createdMs(want.created_at),
+				// A want names a real budget, so cheapest is simply the bottom of it -
+				// no bucket table needed, unlike a listing's price_range label.
+				priceRank: want.price_min ?? Number.POSITIVE_INFINITY
 			}))
-			.sort(byDistance)
+			.sort(compareBy(wantSort))
 	);
 
 	// Derives from filteredItems, so the type/category/search filters carry
@@ -248,7 +262,11 @@
 				</div>
 			{/if}
 		{:else}
-			<!-- Feed -->
+			<!-- Feed. The sort belongs to the "Összes" view only: the grouped list is
+			     a summary with nothing to reorder. -->
+			<div class="flex justify-end">
+				<SortMenu bind:value={itemSort} />
+			</div>
 			<div class="space-y-6">
 				{#if filteredItems.length === 0}
 					<div class="text-center py-12 text-muted">
@@ -268,6 +286,9 @@
 		{/if}
 	{:else}
 		<!-- Wants -->
+		<div class="flex justify-end">
+			<SortMenu bind:value={wantSort} />
+		</div>
 		<div class="space-y-6">
 			{#if filteredWants.length === 0}
 				<div class="text-center py-12 text-muted">

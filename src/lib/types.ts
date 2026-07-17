@@ -53,6 +53,7 @@ export type Listing = {
 	availability_type?: 'ONGOING' | 'FIXED' | null;
 	available_from?: string | null;
 	available_until?: string | null;
+	created_at?: unknown;
 	// Denormalized owner snapshot so public browsing never needs to read /users.
 	owner_name?: string;
 	owner_avatar_url?: string;
@@ -78,6 +79,7 @@ export type Want = {
 	location_address?: string;
 	latitude?: number | null;
 	longitude?: number | null;
+	created_at?: unknown;
 	requester_name?: string;
 	requester_avatar_url?: string;
 };

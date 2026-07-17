@@ -174,14 +174,35 @@
 				}))
 	);
 
+	function matchesSearch(e: Entry, query: string): boolean {
+		return (
+			!query || e.title.toLowerCase().includes(query) || e.description.toLowerCase().includes(query)
+		);
+	}
+
 	let filteredItems = $derived.by(() => {
 		const query = searchQuery.trim().toLowerCase();
-		return entries.filter((e) => {
-			const categoryMatch = !activeCategory || e.category === activeCategory;
-			const searchMatch =
-				!query || e.title.toLowerCase().includes(query) || e.description.toLowerCase().includes(query);
-			return categoryMatch && searchMatch;
-		});
+		return entries.filter(
+			(e) => (!activeCategory || e.category === activeCategory) && matchesSearch(e, query)
+		);
+	});
+
+	/**
+	 * How many pins each category would show, for the filter menu.
+	 *
+	 * Counted off the search-filtered set but NOT the category-filtered one: these
+	 * have to answer "what would I get if I picked this instead", so narrowing them
+	 * by the current pick would zero every other row the moment one is selected.
+	 * Follows the active tab, since that decides what's on the map at all.
+	 */
+	let categoryCounts = $derived.by(() => {
+		const query = searchQuery.trim().toLowerCase();
+		const counts = new Map<string, number>();
+		for (const e of entries) {
+			if (!e.category || !matchesSearch(e, query)) continue;
+			counts.set(e.category, (counts.get(e.category) ?? 0) + 1);
+		}
+		return counts;
 	});
 
 	// Fuzzed positions are identical for everything from the same person, so group
@@ -511,14 +532,23 @@
 				</div>
 				<div class="py-1 max-h-64 overflow-y-auto">
 					{#each CATEGORIES as category}
+						{@const count = categoryCounts.get(category) ?? 0}
+						<!-- Empty categories are dimmed but still clickable: one of them can
+						     be the current pick (a search can strand it at zero), and
+						     disabling it would leave no way to switch off. -->
 						<button
 							onclick={() => { toggleCategory(category); isFilterOpen = false; }}
 							class="w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between gap-2 {activeCategory ===
 							category
 								? 'bg-primary-soft text-primary font-semibold'
-								: 'text-ink hover:bg-raised'}"
+								: count === 0
+									? 'text-faint hover:bg-raised'
+									: 'text-ink hover:bg-raised'}"
 						>
-							{category}
+							<span class="truncate">
+								{category}
+								<span class="font-bold">({count})</span>
+							</span>
 							{#if activeCategory === category}
 								<Check class="w-4 h-4 shrink-0" />
 							{/if}

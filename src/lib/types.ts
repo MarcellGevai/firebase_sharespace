@@ -38,6 +38,12 @@ export type Listing = {
 	type: ListingType;
 	status: ListingStatus;
 	category?: string;
+	/**
+	 * Second level under `category`, drawn from that category's fixed taxonomy
+	 * (see subcategoriesFor). Optional: listings predating it have none, and
+	 * some categories offer none - both group under NO_SUBCATEGORY.
+	 */
+	subcategory?: string;
 	price_range?: string;
 	latitude?: number | null;
 	longitude?: number | null;

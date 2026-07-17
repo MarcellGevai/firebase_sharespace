@@ -35,6 +35,7 @@ export type NewListing = {
 	image_url: string;
 	type: ListingType;
 	category: string;
+	subcategory?: string;
 	price_range: string;
 	location_address?: string;
 	latitude?: number | null;
@@ -53,6 +54,9 @@ export async function createListing(owner: User, data: NewListing): Promise<stri
 		type: data.type,
 		status: 'AVAILABLE',
 		category: data.category,
+		// null, not undefined: Firestore rejects undefined outright, and a stored
+		// null is what the grouped list reads as "no subcategory".
+		subcategory: data.subcategory ?? null,
 		price_range: data.price_range,
 		location_address: data.location_address ?? null,
 		latitude: data.latitude ?? null,

@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	// $state proxies plain objects and arrays, but not Set - mutating a plain one
+	// wouldn't re-render the rows. SvelteSet is the reactive equivalent.
+	import { SvelteSet } from 'svelte/reactivity';
 	import FeedCard from '$lib/components/FeedCard.svelte';
 	import WantCard from '$lib/components/WantCard.svelte';
 	import type { PageData } from './$types';
 	import { page } from '$app/stores';
-	import { Package, Search } from 'lucide-svelte';
+	import { Package, Search, ChevronDown } from 'lucide-svelte';
 	import { distanceKmTo, byDistance, type Coords } from '$lib/distance';
 	import { groupByCategory } from '$lib/grouping';
-	import { categoryIcon } from '$lib/categories';
+	import { categoryIcon, NO_SUBCATEGORY } from '$lib/categories';
 
 	let { data }: { data: PageData } = $props();
 
@@ -98,6 +101,17 @@
 	// through for free and the counts always match what the All view lists.
 	let groupedItems = $derived(groupByCategory(filteredItems));
 
+	// Which category rows are rolled down, keyed case-folded to match the group
+	// key. A Set rather than a flag per row: the rows are data-driven, so there's
+	// no fixed list of them to declare up front. Several may be open at once -
+	// closing one to read another would make comparing two categories a chore.
+	let openCategories = $state(new SvelteSet<string>());
+
+	function toggleCategory(key: string) {
+		if (openCategories.has(key)) openCategories.delete(key);
+		else openCategories.add(key);
+	}
+
 	// The grouped view is a summary of one type, so its noun follows the tab.
 	let groupedLabel = $derived(
 		category === 'ITEMS' ? 'Összes tárgy listája' : 'Összes esemény listája'
@@ -176,29 +190,59 @@
 					<p>{emptyLabel}</p>
 				</div>
 			{:else}
-				<div class="grid grid-cols-2 gap-x-3 gap-y-1">
+				<!-- Cells grow in place when opened rather than pushing their neighbour
+				     around: the grid rows auto-size, so an open cell leaves its partner
+				     where it was instead of reflowing the whole grid. -->
+				<div class="grid grid-cols-2 gap-x-3 gap-y-1 items-start">
 					{#each groupedItems as group (group.category.toLowerCase())}
 						{@const Icon = categoryIcon(group.category)}
-						<div class="flex items-center gap-3 py-2.5">
-							<!-- Hexagon outline behind the glyph. An SVG rather than a
-							     clip-path: clipping can't render a border, only a filled
-							     silhouette. aria-hidden - the label beside it already says
-							     which category this is. -->
-							<div class="relative w-11 h-11 shrink-0 flex items-center justify-center">
-								<svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full text-faint" aria-hidden="true">
-									<polygon
-										points="50,3 93,27 93,73 50,97 7,73 7,27"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="5"
-									/>
-								</svg>
-								<Icon class="relative w-5 h-5 text-muted" />
-							</div>
-							<p class="min-w-0 text-ink leading-snug">
-								<span class="break-words">{group.category}</span>
-								<span class="font-bold text-ink whitespace-nowrap">({group.count})</span>
-							</p>
+						{@const key = group.category.toLowerCase()}
+						{@const isOpen = openCategories.has(key)}
+						<div>
+							<button
+								type="button"
+								onclick={() => toggleCategory(key)}
+								aria-expanded={isOpen}
+								class="w-full flex items-center gap-3 py-2.5 text-left rounded-xl transition-colors hover:bg-raised"
+							>
+								<!-- Hexagon outline behind the glyph. An SVG rather than a
+								     clip-path: clipping can't render a border, only a filled
+								     silhouette. aria-hidden - the label beside it already says
+								     which category this is. -->
+								<div class="relative w-11 h-11 shrink-0 flex items-center justify-center">
+									<svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full {isOpen ? 'text-primary' : 'text-faint'}" aria-hidden="true">
+										<polygon
+											points="50,3 93,27 93,73 50,97 7,73 7,27"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="5"
+										/>
+									</svg>
+									<Icon class="relative w-5 h-5 {isOpen ? 'text-primary' : 'text-muted'}" />
+								</div>
+								<p class="min-w-0 flex-1 text-ink leading-snug">
+									<span class="break-words">{group.category}</span>
+									<span class="font-bold text-ink whitespace-nowrap">({group.count})</span>
+								</p>
+								<ChevronDown
+									class="w-4 h-4 shrink-0 text-faint transition-transform duration-200 {isOpen ? 'rotate-180' : ''}"
+								/>
+							</button>
+
+							{#if isOpen}
+								<!-- Indented under the hexagon's width, so the second level reads
+								     as belonging to the row above it rather than as a new one. -->
+								<ul class="ml-6 pl-5 border-l border-line space-y-1 pb-2">
+									{#each group.subgroups as sub (sub.subcategory.toLowerCase())}
+										<li class="flex items-baseline justify-between gap-2 text-sm">
+											<span class="min-w-0 break-words {sub.subcategory === NO_SUBCATEGORY ? 'text-faint italic' : 'text-muted'}">
+												{sub.subcategory}
+											</span>
+											<span class="font-bold text-ink shrink-0">({sub.count})</span>
+										</li>
+									{/each}
+								</ul>
+							{/if}
 						</div>
 					{/each}
 				</div>

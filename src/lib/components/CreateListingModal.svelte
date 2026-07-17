@@ -1,16 +1,19 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { X, Package, Wrench, Briefcase, Tag, Info, LocateFixed, Home, MapPin, Loader2 } from 'lucide-svelte';
 	import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 	import { v4 as uuidv4 } from 'uuid';
 	import { storage } from '$lib/firebase';
 	import { geocodeAddress, searchAddress, reverseGeocode, type AddressSuggestion } from '$lib/geocode';
 	import { createListing } from '$lib/data/listings';
+	import { subcategoriesFor } from '$lib/categories';
 
 	let { isOpen = $bindable(false), onSuccess, currentUser }: { isOpen: boolean; onSuccess?: () => void; currentUser?: any } = $props();
 
 	let type = $state('ITEM');
 	let title = $state('');
 	let category = $state('');
+	let subcategory = $state('');
 	let priceRange = $state('');
 	let description = $state('');
 	let isSubmitting = $state(false);
@@ -140,6 +143,14 @@
 	}
 
 	const categories = ['Szerszámok', 'Háztartás', 'Elektronika', 'Kert', 'Sport', 'Szolgáltatás', 'Egyéb'];
+
+	// The second level depends on the first, so switching category clears a pick
+	// that no longer belongs to it - otherwise a drill could end up filed under
+	// Sport. 'Egyéb' has no taxonomy, so its picker simply doesn't render.
+	let subOptions = $derived(subcategoriesFor(category));
+	$effect(() => {
+		if (!subOptions.includes(untrack(() => subcategory))) subcategory = '';
+	});
 	const priceRanges = ['Ingyenes', '1 000 - 5 000 Ft', '5 000 - 10 000 Ft', '10 000+ Ft', 'Megegyezés szerint'];
 
 	async function handleSubmit(e: Event) {
@@ -207,6 +218,8 @@
 				image_url,
 				type: type as 'ITEM' | 'SERVICE',
 				category,
+				// Optional: categories without a taxonomy ('Egyéb') never set one.
+				subcategory: subcategory || undefined,
 				price_range: priceRange,
 				location_address,
 				latitude: coords?.lat ?? null,
@@ -225,6 +238,7 @@
 			// Reset form
 			title = '';
 			category = '';
+			subcategory = '';
 			priceRange = '';
 			description = '';
 			location_address = '';
@@ -329,6 +343,25 @@
 								</select>
 							</div>
 						</div>
+
+						{#if subOptions.length > 0}
+							<div class="space-y-1.5">
+								<label for="subcategory" class="block text-sm font-semibold text-ink">Alkategória</label>
+								<div class="relative">
+									<Tag class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-faint" />
+									<select
+										id="subcategory"
+										bind:value={subcategory}
+										class="w-full pl-9 pr-4 py-2.5 bg-raised border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all appearance-none"
+									>
+										<option value="">Nincs megadva</option>
+										{#each subOptions as sub}
+											<option value={sub}>{sub}</option>
+										{/each}
+									</select>
+								</div>
+							</div>
+						{/if}
 
 						<div class="space-y-1.5">
 							<label for="price" class="block text-sm font-semibold text-ink">Árkategória (Kölcsönzés) *</label>

@@ -35,7 +35,18 @@
 	<div class="p-4 flex items-center justify-between">
 		<a href={`/profile/${want.requester_id}`} class="flex items-center gap-3 hover:opacity-80 transition-opacity">
 			<img src={want.requester_avatar_url} alt={want.requester_name} class="w-10 h-10 rounded-full object-cover bg-gray-100" />
-			<h3 class="font-semibold text-gray-900 leading-tight">{want.requester_name}</h3>
+			<div>
+				<h3 class="font-semibold text-gray-900 leading-tight">{want.requester_name}</h3>
+				<!-- Same slot and styling as FeedCard's, so distance reads the same on
+				     both sides of the feed. A want carries no coarse town field to sit
+				     next to it, so the pin and the distance travel together. -->
+				{#if distanceKm != null}
+					<div class="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+						<MapPin class="w-3 h-3 shrink-0" />
+						<span class="font-semibold text-blue-600">{formatDistance(distanceKm)}</span>
+					</div>
+				{/if}
+			</div>
 		</a>
 		<span class="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-red-600 bg-red-50 px-2.5 py-1 rounded-full flex-shrink-0">
 			<Search class="w-3 h-3" /> Igény
@@ -60,12 +71,6 @@
 				{formatDate(want.date_from)} - {formatDate(want.date_to)}
 			</span>
 			<span class="font-bold text-red-600">{want.price_min} - {want.price_max} Ft</span>
-			{#if distanceKm != null}
-				<span class="flex items-center gap-1 font-semibold text-blue-600">
-					<MapPin class="w-3.5 h-3.5" />
-					{formatDistance(distanceKm)}
-				</span>
-			{/if}
 		</div>
 
 		<!-- Actions -->

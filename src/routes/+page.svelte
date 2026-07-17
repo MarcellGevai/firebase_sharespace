@@ -433,12 +433,42 @@
 			// Read once at construction; the $effect below handles later toggles.
 			style: get(theme) === 'dark' ? MAP_STYLE_DARK : MAP_STYLE_LIGHT,
 			center: BUDAPEST_CENTER,
-			zoom: 12
+			zoom: 12,
+			// Suppressed so it can be re-added compact below. Attribution itself is
+			// not optional - see the control's comment.
+			attributionControl: false
 		});
 
+		/*
+		 * Attribution, collapsed to a single (i) that expands on tap.
+		 *
+		 * It cannot simply be removed. The text comes from OpenFreeMap's TileJSON,
+		 * and most of it is a licence condition rather than branding: OSM data is
+		 * ODbL, which requires attribution, and OpenFreeMap's terms ask for
+		 * "OpenFreeMap (c) OpenMapTiles Data from OpenStreetMap". `compact` is
+		 * MapLibre's own answer to the space that takes - the credit stays one tap
+		 * away rather than spanning the map.
+		 *
+		 * customAttribution is passed explicitly because the options object replaces
+		 * MapLibre's defaults wholesale, and its default carries the MapLibre link.
+		 * Omitting it here would quietly drop that credit as a side effect of asking
+		 * for compact.
+		 */
+		const attribution = new maplibregl.AttributionControl({
+			compact: true,
+			customAttribution: '<a href="https://maplibre.org/" target="_blank">MapLibre</a>'
+		});
+		map.addControl(attribution, 'bottom-right');
 		map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
 		map.on('load', () => {
 			mapLoaded = true;
+			// MapLibre renders compact attribution already expanded (it adds
+			// `maplibregl-compact-show` itself) and only minimizes it on interactions
+			// that panning alone doesn't trigger - so without this it just sits there
+			// as a full-width bar, which is the thing compact was meant to solve.
+			// There's no "start collapsed" option, hence reaching for the class.
+			// The (i) stays, and one tap brings the credit back.
+			attribution._container?.classList.remove('maplibregl-compact-show');
 		});
 		// Clusters depend on the viewport, so they have to be recomputed after every
 		// pan/zoom. moveend covers zoom too, and fires once the gesture settles.

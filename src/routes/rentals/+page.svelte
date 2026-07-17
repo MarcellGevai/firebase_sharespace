@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { currentUser } from '$lib/auth';
@@ -8,6 +8,7 @@
 	import { getListing } from '$lib/data/listings';
 	import { chatUrl } from '$lib/chat';
 	import { Clock, CheckCircle2, ArrowRight } from 'lucide-svelte';
+	import CollapsibleSection from '$lib/components/CollapsibleSection.svelte';
 	import type { DealRequest } from '$lib/types';
 
 	type RentalRow = {
@@ -22,6 +23,11 @@
 	let activeRentals = $state<RentalRow[]>([]);
 	let completedRentals = $state<RentalRow[]>([]);
 	let now = $state(Date.now());
+
+	// Active starts rolled down: it's the half you'd open the page to check.
+	// Closed rentals are history and stay out of the way until asked for.
+	let openActive = $state(true);
+	let openCompleted = $state(false);
 
 	// Firestore Timestamp -> epoch ms, tolerant of the shapes seen across the app
 	// (real Timestamp objects client-side, {seconds,nanoseconds} after a reload).
@@ -100,6 +106,31 @@
 	<title>Bérléseim - Sharespace</title>
 </svelte:head>
 
+<!--
+	One rental row. Both sections render the same card and differ only in the
+	status line, so that line is passed in rather than the whole row duplicated.
+-->
+{#snippet rentalRow(row: RentalRow, status: Snippet)}
+	<a
+		href={chatUrl(row.request.listing_id, row.isOwner ? row.request.requester_id : row.request.owner_id)}
+		class="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+	>
+		<img
+			src={row.listingImage}
+			alt={row.listingTitle}
+			class="w-14 h-14 rounded-xl object-cover bg-gray-100 flex-shrink-0"
+		/>
+		<div class="flex-1 min-w-0">
+			<p class="font-semibold text-gray-900 truncate">{row.listingTitle}</p>
+			<p class="text-xs text-gray-500">
+				{row.isOwner ? 'Bérbe adva neki:' : 'Bérelve tőle:'} {row.otherUserName}
+			</p>
+			{@render status()}
+		</div>
+		<ArrowRight class="w-4 h-4 text-gray-300 flex-shrink-0" />
+	</a>
+{/snippet}
+
 <div class="max-w-2xl mx-auto space-y-8">
 	<h1 class="text-2xl font-bold text-gray-900">Bérléseim</h1>
 
@@ -108,71 +139,67 @@
 			<div class="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
 		</div>
 	{:else}
-		<section class="space-y-3">
-			<h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-				<Clock class="w-5 h-5 text-green-600" />
-				Aktív bérlések
-			</h2>
-			{#if activeRentals.length === 0}
-				<p class="text-sm text-gray-500">Jelenleg nincs aktív bérlésed.</p>
-			{:else}
-				{#each activeRentals as row (row.request.id)}
-					{@const startMs = tsToMs(row.request.actual_rental_start)}
-					<a
-						href={chatUrl(row.request.listing_id, row.isOwner ? row.request.requester_id : row.request.owner_id)}
-						class="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-					>
-						<img src={row.listingImage} alt={row.listingTitle} class="w-14 h-14 rounded-xl object-cover bg-gray-100 flex-shrink-0" />
-						<div class="flex-1 min-w-0">
-							<p class="font-semibold text-gray-900 truncate">{row.listingTitle}</p>
-							<p class="text-xs text-gray-500">
-								{row.isOwner ? 'Bérbe adva neki:' : 'Bérelve tőle:'} {row.otherUserName}
-							</p>
-							{#if row.request.handover_status === 'RETURN_INITIATED'}
-								<p class="text-xs font-semibold text-purple-600 mt-1">Visszaadás folyamatban...</p>
-							{:else if startMs}
-								<p class="text-sm font-bold text-green-600 mt-1">{formatDuration(now - startMs)} eltelt</p>
-							{:else}
-								<p class="text-xs text-gray-400 mt-1">Kezdés ideje ismeretlen</p>
-							{/if}
-						</div>
-						<ArrowRight class="w-4 h-4 text-gray-300 flex-shrink-0" />
-					</a>
-				{/each}
-			{/if}
-		</section>
+		<div class="space-y-3">
+			<CollapsibleSection
+				label="Aktív bérlések"
+				count={activeRentals.length}
+				icon={Clock}
+				iconClass="text-green-600"
+				bind:open={openActive}
+			>
+				{#if activeRentals.length === 0}
+					<p class="text-sm text-gray-500 p-4">Jelenleg nincs aktív bérlésed.</p>
+				{:else}
+					<ul class="divide-y divide-gray-100">
+						{#each activeRentals as row (row.request.id)}
+							{@const startMs = tsToMs(row.request.actual_rental_start)}
+							<li>
+								{#snippet activeStatus()}
+									{#if row.request.handover_status === 'RETURN_INITIATED'}
+										<p class="text-xs font-semibold text-purple-600 mt-1">Visszaadás folyamatban...</p>
+									{:else if startMs}
+										<p class="text-sm font-bold text-green-600 mt-1">{formatDuration(now - startMs)} eltelt</p>
+									{:else}
+										<p class="text-xs text-gray-400 mt-1">Kezdés ideje ismeretlen</p>
+									{/if}
+								{/snippet}
+								{@render rentalRow(row, activeStatus)}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</CollapsibleSection>
 
-		<section class="space-y-3">
-			<h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-				<CheckCircle2 class="w-5 h-5 text-gray-400" />
-				Lezárt bérlések
-			</h2>
-			{#if completedRentals.length === 0}
-				<p class="text-sm text-gray-500">Még nincs lezárt bérlésed.</p>
-			{:else}
-				{#each completedRentals as row (row.request.id)}
-					{@const startMs = tsToMs(row.request.actual_rental_start)}
-					{@const endMs = tsToMs(row.request.actual_rental_end)}
-					<a
-						href={chatUrl(row.request.listing_id, row.isOwner ? row.request.requester_id : row.request.owner_id)}
-						class="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-					>
-						<img src={row.listingImage} alt={row.listingTitle} class="w-14 h-14 rounded-xl object-cover bg-gray-100 flex-shrink-0" />
-						<div class="flex-1 min-w-0">
-							<p class="font-semibold text-gray-900 truncate">{row.listingTitle}</p>
-							<p class="text-xs text-gray-500">
-								{row.isOwner ? 'Bérbe adva neki:' : 'Bérelve tőle:'} {row.otherUserName}
-							</p>
-							{#if startMs && endMs}
-								<p class="text-sm font-bold text-gray-600 mt-1">Teljes időtartam: {formatDuration(endMs - startMs)}</p>
-							{:else}
-								<p class="text-xs text-gray-400 mt-1">Időtartam ismeretlen</p>
-							{/if}
-						</div>
-						<ArrowRight class="w-4 h-4 text-gray-300 flex-shrink-0" />
-					</a>
-				{/each}
-			{/if}
-		</section>
+			<CollapsibleSection
+				label="Lezárt bérlések"
+				count={completedRentals.length}
+				icon={CheckCircle2}
+				iconClass="text-gray-400"
+				bind:open={openCompleted}
+			>
+				{#if completedRentals.length === 0}
+					<p class="text-sm text-gray-500 p-4">Még nincs lezárt bérlésed.</p>
+				{:else}
+					<ul class="divide-y divide-gray-100">
+						{#each completedRentals as row (row.request.id)}
+							{@const startMs = tsToMs(row.request.actual_rental_start)}
+							{@const endMs = tsToMs(row.request.actual_rental_end)}
+							<li>
+								{#snippet completedStatus()}
+									{#if startMs && endMs}
+										<p class="text-sm font-bold text-gray-600 mt-1">
+											Teljes időtartam: {formatDuration(endMs - startMs)}
+										</p>
+									{:else}
+										<p class="text-xs text-gray-400 mt-1">Időtartam ismeretlen</p>
+									{/if}
+								{/snippet}
+								{@render rentalRow(row, completedStatus)}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</CollapsibleSection>
+		</div>
 	{/if}
 </div>

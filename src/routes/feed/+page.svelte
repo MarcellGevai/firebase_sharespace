@@ -143,16 +143,16 @@
 
 <div class="space-y-6">
 	<!-- Hirdetések / Igények mode switch -->
-	<div class="grid grid-cols-2 gap-2 bg-raised rounded-2xl p-1">
+	<div class="grid grid-cols-2 gap-2 bg-raised/60 rounded-2xl p-1.5">
 		<button
 			onclick={() => (mode = 'LISTINGS')}
-			class="py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 {mode === 'LISTINGS' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}"
+			class="py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 {mode === 'LISTINGS' ? 'bg-primary text-primary-fg shadow-sm' : 'text-muted hover:text-ink hover:bg-surface/50'}"
 		>
 			<Package class="w-4 h-4" /> Hirdetések
 		</button>
 		<button
 			onclick={() => (mode = 'WANTS')}
-			class="py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 {mode === 'WANTS' ? 'bg-surface text-want shadow-sm' : 'text-muted hover:text-ink'}"
+			class="py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 {mode === 'WANTS' ? 'bg-want text-want-fg shadow-sm' : 'text-muted hover:text-ink hover:bg-surface/50'}"
 		>
 			<Search class="w-4 h-4" /> Igények
 		</button>
@@ -164,17 +164,17 @@
 		<div class="flex gap-2">
 			<button
 				onclick={() => (category = 'ITEMS')}
-				class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors border {category === 'ITEMS'
-					? 'bg-primary-soft text-primary border-primary'
-					: 'bg-surface text-muted border-line hover:bg-raised'}"
+				class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border {category === 'ITEMS'
+					? 'bg-primary-soft text-primary border-primary shadow-sm ring-1 ring-primary/20'
+					: 'bg-surface text-muted border-line hover:border-primary/40 hover:text-ink hover:bg-raised'}"
 			>
 				Tárgyak
 			</button>
 			<button
 				onclick={() => (category = 'SERVICES')}
-				class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors border {category === 'SERVICES'
-					? 'bg-primary-soft text-primary border-primary'
-					: 'bg-surface text-muted border-line hover:bg-raised'}"
+				class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border {category === 'SERVICES'
+					? 'bg-primary-soft text-primary border-primary shadow-sm ring-1 ring-primary/20'
+					: 'bg-surface text-muted border-line hover:border-primary/40 hover:text-ink hover:bg-raised'}"
 			>
 				Szolgáltatások/Események
 			</button>
@@ -185,13 +185,13 @@
 		<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
 			<button
 				onclick={() => (view = 'ALL')}
-				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors border {view === 'ALL' ? 'bg-primary-soft text-primary border-primary' : 'bg-surface text-muted hover:bg-raised border-line'}"
+				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all border {view === 'ALL' ? 'bg-primary text-primary-fg border-transparent shadow-sm' : 'bg-raised text-muted hover:text-ink hover:bg-surface border-line'}"
 			>
 				Összes
 			</button>
 			<button
 				onclick={() => (view = 'GROUPED')}
-				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors border {view === 'GROUPED' ? 'bg-primary-soft text-primary border-primary' : 'bg-surface text-muted hover:bg-raised border-line'}"
+				class="px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all border {view === 'GROUPED' ? 'bg-primary text-primary-fg border-transparent shadow-sm' : 'bg-raised text-muted hover:text-ink hover:bg-surface border-line'}"
 			>
 				{groupedLabel}
 			</button>

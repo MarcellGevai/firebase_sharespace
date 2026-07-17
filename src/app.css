@@ -42,15 +42,16 @@
 
 	/*
 	  Igény (a want) is the inverse of a listing and has always been the app's
-	  second colour. Coral rather than the old pure red: with green now primary,
-	  red-against-green reads as alarm, and red is worth reserving for
-	  destructive actions and errors so that it still means something.
+	  second colour. Soft rose rather than the old harsh red: with emerald green
+	  now primary, an aggressive red reads as danger/alarm. Dusty rose keeps the
+	  warm-vs-cool contrast with green while feeling inviting, not alarming.
+	  Red is reserved for --color-danger and destructive actions.
 	*/
-	--color-want: #d1385a;
-	--color-want-hover: #b32c4b;
+	--color-want: #e06384;
+	--color-want-hover: #cc4f70;
 	--color-want-fg: #ffffff;
-	--color-want-soft: #fff7f9;
-	--color-want-line: #f7ccd6;
+	--color-want-soft: #fdf2f5;
+	--color-want-line: #f2c4d0;
 
 	--color-danger: #dc2626;
 	/* Ratings, warnings, and "in progress" - meanings green must not swallow. */
@@ -79,25 +80,25 @@
   elevation comes from a light hairline plus a soft black bloom.
 */
 :root.dark {
-	--color-canvas: #0a0b0d;
-	--color-surface: #141619;
-	--color-raised: #1e2126;
-	--color-line: #2a2e35;
-	--color-ink: #eef1f4;
-	--color-muted: #9aa4b0;
-	--color-faint: #6b7683;
+	--color-canvas: #111318;
+	--color-surface: #1a1d24;
+	--color-raised: #242830;
+	--color-line: #2f3540;
+	--color-ink: #e8ecf1;
+	--color-muted: #8b95a3;
+	--color-faint: #5d6878;
 
-	--color-primary: #2ee06a;
-	--color-primary-hover: #4ce983;
-	--color-primary-fg: #05140a;
-	--color-primary-soft: #10281a;
-	--color-primary-line: #1d5335;
+	--color-primary: #34d399;
+	--color-primary-hover: #5eead4;
+	--color-primary-fg: #052e1a;
+	--color-primary-soft: #0f2d20;
+	--color-primary-line: #1a5c3a;
 
-	--color-want: #ff6b85;
-	--color-want-hover: #ff8899;
-	--color-want-fg: #2b0710;
-	--color-want-soft: #2a1119;
-	--color-want-line: #5c2436;
+	--color-want: #f4a0b5;
+	--color-want-hover: #f7bbc9;
+	--color-want-fg: #2e0d16;
+	--color-want-soft: #2b1520;
+	--color-want-line: #5a2838;
 
 	--color-danger: #f87171;
 	--color-star: #facc15;
@@ -106,10 +107,10 @@
 	--color-warn-soft: #2a2010;
 	--color-progress: #a78bfa;
 
-	--color-scrim: rgba(0, 0, 0, 0.7);
+	--color-scrim: rgba(5, 8, 15, 0.75);
 
-	--shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.55);
-	--shadow-pop: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 16px 48px rgba(0, 0, 0, 0.7);
+	--shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.4);
+	--shadow-pop: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 16px 48px rgba(0, 0, 0, 0.55);
 }
 
 /*

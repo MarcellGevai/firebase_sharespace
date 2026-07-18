@@ -122,3 +122,81 @@ export const sendRentalStartEmail = onDocumentUpdated('requests/{id}', async (ev
 		}
 	}
 });
+
+export const sendRentalEndEmail = onDocumentUpdated('requests/{id}', async (event) => {
+	const before = event.data?.before.data();
+	const after = event.data?.after.data();
+	if (!before || !after) return;
+	
+	// Transition: RETURN_INITIATED -> RETURN_COMPLETED
+	if (before.handover_status === 'RETURN_INITIATED' && after.handover_status === 'RETURN_COMPLETED') {
+		const { Resend } = await import('resend');
+		
+		const RESEND_API_KEY = process.env.RESEND_API_KEY;
+		if (!RESEND_API_KEY) {
+			console.error('RESEND_API_KEY is not defined in the environment.');
+			return;
+		}
+
+		const resend = new Resend(RESEND_API_KEY);
+		
+		const ownerSnap = await db.collection('users').doc(after.owner_id).get();
+		const renterSnap = await db.collection('users').doc(after.requester_id).get();
+		
+		const owner = ownerSnap.data();
+		const renter = renterSnap.data();
+		
+		if (!owner?.email || !renter?.email) {
+			console.log('Owner or Renter email missing.');
+			return;
+		}
+
+		const itemName = after.item_title || 'Tárgy / Szolgáltatás';
+		const expectedPrice = after.price_offer || 0;
+		
+		const startDateObj = after.actual_rental_start ? after.actual_rental_start.toDate() : new Date();
+		const endDateObj = after.actual_rental_end ? after.actual_rental_end.toDate() : new Date();
+		
+		const startStr = startDateObj.toLocaleString('hu-HU');
+		const endStr = endDateObj.toLocaleString('hu-HU');
+
+		const durationMs = endDateObj.getTime() - startDateObj.getTime();
+		const durationDays = Math.max(1, Math.ceil(durationMs / (1000 * 60 * 60 * 24)));
+		const finalCost = expectedPrice * durationDays;
+		
+		const subject = `Bérlés befejeződött: ${itemName}`;
+		const html = `
+			<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+				<h2 style="color: #2196F3;">A bérlés sikeresen lezárult!</h2>
+				<p>A(z) <strong>${itemName}</strong> nevű tárgy/szolgáltatás bérlése véget ért.</p>
+				<div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+					<h3>Összegzés</h3>
+					<ul>
+						<li><strong>Kezdés:</strong> ${startStr}</li>
+						<li><strong>Befejezés:</strong> ${endStr}</li>
+						<li><strong>Időtartam:</strong> ${durationDays} nap (vagy alkalom)</li>
+						<li><strong>Végső díj:</strong> ${finalCost} Ft</li>
+					</ul>
+				</div>
+				<p>Kérjük, ne felejtsd el értékelni a partneredet a ShareSpace felületén!</p>
+			</div>
+		`;
+
+		try {
+			const { data, error } = await resend.emails.send({
+				from: 'ShareSpace <onboarding@resend.dev>',
+				to: [owner.email, renter.email],
+				subject,
+				html
+			});
+
+			if (error) {
+				console.error('Failed to send rental end email:', error);
+			} else {
+				console.log('Rental end email sent successfully:', data?.id);
+			}
+		} catch (err) {
+			console.error('Unexpected error sending email:', err);
+		}
+	}
+});

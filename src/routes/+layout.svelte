@@ -6,7 +6,7 @@
 	import CreateRequestModal from '$lib/components/CreateRequestModal.svelte';
 	import { Plus } from 'lucide-svelte';
 	import { page } from '$app/stores';
-	import { initAuth } from '$lib/auth';
+	import { auth } from '$lib/firebase';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: any } = $props();
@@ -38,7 +38,7 @@
 	</main>
 
 	<!-- Floating Action Buttons -->
-	{#if currentUser}
+	{#if currentUser && auth.currentUser?.emailVerified}
 		<div class="fixed bottom-6 left-6 z-40 flex flex-col items-start gap-3">
 			<!-- "Igény" (request). Labels expand on hover; the buttons themselves are
 			     always tappable so touch devices, which never hover, can reach both. -->

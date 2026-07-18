@@ -6,16 +6,19 @@
 	import { currentUser } from '$lib/auth';
 	import { watchInbox, type InboxConversation } from '$lib/data/messages';
 	import { getUserProfile } from '$lib/data/users';
+	import { getListing } from '$lib/data/listings';
 
 	let raw = $state<InboxConversation[]>([]);
 	let profiles = $state<Record<string, { name: string; avatar_url: string }>>({});
+	let listingDetails = $state<Record<string, { category: string }>>({});
 	let loaded = $state(false);
 
 	let conversations = $derived(
 		raw.map((c) => ({
 			...c,
 			other_user_name: profiles[c.other_user_id]?.name ?? '…',
-			other_user_avatar: profiles[c.other_user_id]?.avatar_url ?? ''
+			other_user_avatar: profiles[c.other_user_id]?.avatar_url ?? '',
+			listing_category: listingDetails[c.listing_id]?.category ?? ''
 		}))
 	);
 
@@ -24,6 +27,14 @@
 		for (const id of missing) {
 			const u = await getUserProfile(id);
 			if (u) profiles = { ...profiles, [id]: { name: u.name, avatar_url: u.avatar_url } };
+		}
+	}
+
+	async function ensureListings(list: InboxConversation[]) {
+		const missing = [...new Set(list.map((c) => c.listing_id))].filter((id) => !listingDetails[id]);
+		for (const id of missing) {
+			const l = await getListing(id);
+			if (l) listingDetails = { ...listingDetails, [id]: { category: l.category } };
 		}
 	}
 
@@ -37,6 +48,7 @@
 			raw = list;
 			loaded = true;
 			ensureProfiles(list);
+			ensureListings(list);
 		});
 		return () => unsub();
 	});
@@ -90,10 +102,17 @@
 							</h3>
 							<span class="text-xs text-faint whitespace-nowrap">{formatDate(conv.created_at)}</span>
 						</div>
-						<p class="text-xs font-medium text-primary mb-1 truncate">{conv.listing_title}</p>
-						<p class="text-sm text-muted truncate {(!conv.is_read && !conv.is_mine) ? 'font-semibold text-ink' : ''}">
+						<div class="mb-1.5 flex">
+							<div class="inline-flex items-center min-w-0 text-[11px] bg-slate-100/70 dark:bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-200/50 dark:border-slate-700/50">
+								{#if conv.listing_category}
+									<span class="text-slate-500 dark:text-slate-400 whitespace-nowrap mr-1">{conv.listing_category}:</span>
+								{/if}
+								<span class="text-slate-700 dark:text-slate-300 font-medium truncate">{conv.listing_title}</span>
+							</div>
+						</div>
+						<p class="text-sm truncate {(!conv.is_read && !conv.is_mine) ? 'font-semibold text-ink' : 'text-muted'}">
 							{#if conv.is_mine}
-								<span class="text-faint">You: </span>
+								<span class="text-faint font-normal">You: </span>
 							{/if}
 							{conv.last_message}
 						</p>

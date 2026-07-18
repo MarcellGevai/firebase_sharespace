@@ -91,11 +91,11 @@
 		return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 	}
 
-	// Matches the rose "Igény" FAB, so want pins/clusters read as the same thing.
+	// Matches the vibrant amber "Igény" FAB, so want pins/clusters read as the same thing.
 	// Re-read on every theme flip: the token behind it changes value.
 	let WANT_COLOR = $derived.by(() => {
 		$theme;
-		return themeColor('--color-want', '#e06384');
+		return themeColor('--color-want', '#f59e0b');
 	});
 
 	// Cluster radius in px; past CLUSTER_MAX_ZOOM every pin stands on its own.

@@ -102,10 +102,10 @@
 			<h2 class="text-2xl font-bold text-ink mb-2">Erősítsd meg az e-mail címed!</h2>
 			<p class="text-muted mb-6">
 				Elküldtünk egy hitelesítő linket a(z) <span class="font-semibold text-ink">{email}</span> címre.
-				A megerősítés opcionális — már most be tudsz jelentkezni.
+				A fiókod használatához kérjük, kattints az e-mailben található linkre.
 			</p>
 			<a href="/" class="inline-flex items-center justify-center px-6 py-3 bg-primary hover:bg-primary-hover text-primary-fg font-semibold rounded-xl transition-colors">
-				Tovább az alkalmazáshoz
+				Tovább a bejelentkezéshez
 			</a>
 		</div>
 	{:else}

@@ -30,6 +30,7 @@
 		"firebase": "^12.13.0",
 		"lucide-svelte": "^1.0.1",
 		"maplibre-gl": "^5.24.0",
+		"resend": "^6.17.2",
 		"supercluster": "^8.0.1",
 		"uuid": "^14.0.1"
 	}

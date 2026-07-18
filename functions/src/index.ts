@@ -8,6 +8,7 @@
 //
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
@@ -197,6 +198,67 @@ export const sendRentalEndEmail = onDocumentUpdated('requests/{id}', async (even
 			}
 		} catch (err) {
 			console.error('Unexpected error sending email:', err);
+		}
+	}
+	}
+});
+
+export const sendWeeklyNewsletter = onSchedule('every monday 10:00', async (event) => {
+	const { Resend } = await import('resend');
+	
+	const RESEND_API_KEY = process.env.RESEND_API_KEY;
+	if (!RESEND_API_KEY) {
+		console.error('RESEND_API_KEY is not defined in the environment.');
+		return;
+	}
+
+	const resend = new Resend(RESEND_API_KEY);
+	
+	// Query users where newsletterSubscribed is true
+	const subscribedUsersSnap = await db.collection('users').where('newsletterSubscribed', '==', true).get();
+	
+	if (subscribedUsersSnap.empty) {
+		console.log('No users subscribed to the newsletter.');
+		return;
+	}
+
+	const subject = 'Heti ShareSpace Újdonságok';
+	const html = `
+		<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+			<h2 style="color: #FF9800;">Heti ShareSpace Újdonságok</h2>
+			<p>Kedves Felhasználó!</p>
+			<p>Itt vannak a hét legújabb és legérdekesebb megosztásai a környékeden.</p>
+			<p><em>(Ide jönnének a dinamikus hirdetések...)</em></p>
+			<br/>
+			<p>Üdvözlettel,<br/>A ShareSpace csapata</p>
+		</div>
+	`;
+
+	const batchSize = 50;
+	const docs = subscribedUsersSnap.docs;
+	
+	for (let i = 0; i < docs.length; i += batchSize) {
+		const batch = docs.slice(i, i + batchSize);
+		const emails = batch.map(doc => doc.data().email).filter(Boolean);
+		
+		if (emails.length > 0) {
+			try {
+				const { data, error } = await resend.emails.send({
+					from: 'ShareSpace <onboarding@resend.dev>',
+					to: ['onboarding@resend.dev'], // Use our verified domain email
+					bcc: emails,
+					subject,
+					html
+				});
+
+				if (error) {
+					console.error('Failed to send newsletter batch:', error);
+				} else {
+					console.log('Newsletter batch sent successfully:', data?.id);
+				}
+			} catch (err) {
+				console.error('Unexpected error sending newsletter batch:', err);
+			}
 		}
 	}
 });

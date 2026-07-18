@@ -41,17 +41,14 @@
 	--color-primary-line: #bfe5cd;
 
 	/*
-	  Igény (a want) is the inverse of a listing and has always been the app's
-	  second colour. Soft rose rather than the old harsh red: with emerald green
-	  now primary, an aggressive red reads as danger/alarm. Dusty rose keeps the
-	  warm-vs-cool contrast with green while feeling inviting, not alarming.
-	  Red is reserved for --color-danger and destructive actions.
+	  Igény (a want) is the inverse of a listing. Now a vibrant, premium Amber/Gold.
+	  Warm and elegant contrast against the primary green.
 	*/
-	--color-want: #e06384;
-	--color-want-hover: #cc4f70;
+	--color-want: #f59e0b; /* amber-500 */
+	--color-want-hover: #d97706; /* amber-600 */
 	--color-want-fg: #ffffff;
-	--color-want-soft: #fdf2f5;
-	--color-want-line: #f2c4d0;
+	--color-want-soft: #fffbeb; /* amber-50 */
+	--color-want-line: #fde68a; /* amber-200 */
 
 	--color-danger: #dc2626;
 	/* Ratings, warnings, and "in progress" - meanings green must not swallow. */
@@ -94,11 +91,11 @@
 	--color-primary-soft: #0f2d20;
 	--color-primary-line: #1a5c3a;
 
-	--color-want: #f4a0b5;
-	--color-want-hover: #f7bbc9;
-	--color-want-fg: #2e0d16;
-	--color-want-soft: #2b1520;
-	--color-want-line: #5a2838;
+	--color-want: #fbbf24; /* amber-400 */
+	--color-want-hover: #f59e0b; /* amber-500 */
+	--color-want-fg: #451a03; /* amber-950 */
+	--color-want-soft: rgba(251, 191, 36, 0.15); /* amber-400 at 15% opacity */
+	--color-want-line: rgba(251, 191, 36, 0.3); /* amber-400 at 30% opacity */
 
 	--color-danger: #f87171;
 	--color-star: #facc15;

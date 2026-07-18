@@ -54,3 +54,71 @@ export const geocode = onCall(async (request) => {
 	if (!results.length) return null;
 	return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
 });
+
+export const sendRentalStartEmail = onDocumentUpdated('requests/{id}', async (event) => {
+	const before = event.data?.before.data();
+	const after = event.data?.after.data();
+	if (!before || !after) return;
+	
+	// Transition: HANDOVER_INITIATED -> HANDOVER_COMPLETED
+	if (before.handover_status === 'HANDOVER_INITIATED' && after.handover_status === 'HANDOVER_COMPLETED') {
+		// Import resend dynamically or at the top
+		const { Resend } = await import('resend');
+		
+		// In a real prod setup we would use defineSecret, but for prototype we can use process.env
+		const RESEND_API_KEY = process.env.RESEND_API_KEY;
+		if (!RESEND_API_KEY) {
+			console.error('RESEND_API_KEY is not defined in the environment.');
+			return;
+		}
+
+		const resend = new Resend(RESEND_API_KEY);
+		
+		const ownerSnap = await db.collection('users').doc(after.owner_id).get();
+		const renterSnap = await db.collection('users').doc(after.requester_id).get();
+		
+		const owner = ownerSnap.data();
+		const renter = renterSnap.data();
+		
+		if (!owner?.email || !renter?.email) {
+			console.log('Owner or Renter email missing.');
+			return;
+		}
+
+		const itemName = after.item_title || 'Tárgy / Szolgáltatás';
+		const expectedPrice = after.price_offer || 0;
+		// Use Firestore timestamp or current date for the start date
+		const startDate = after.actual_rental_start ? after.actual_rental_start.toDate() : new Date();
+		const startStr = startDate.toLocaleString('hu-HU');
+		
+		const subject = `Bérlés megkezdődött: ${itemName}`;
+		const html = `
+			<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+				<h2 style="color: #4CAF50;">A bérlés sikeresen megkezdődött!</h2>
+				<p>A(z) <strong>${itemName}</strong> nevű tárgy/szolgáltatás bérlése hivatalosan elindult.</p>
+				<ul>
+					<li><strong>Kezdés ideje:</strong> ${startStr}</li>
+					<li><strong>Várható napi/alkalmi díj:</strong> ${expectedPrice} Ft</li>
+				</ul>
+				<p>Jó használatot kíván a ShareSpace csapata!</p>
+			</div>
+		`;
+
+		try {
+			const { data, error } = await resend.emails.send({
+				from: 'ShareSpace <onboarding@resend.dev>',
+				to: [owner.email, renter.email],
+				subject,
+				html
+			});
+
+			if (error) {
+				console.error('Failed to send rental start email:', error);
+			} else {
+				console.log('Rental start email sent successfully:', data?.id);
+			}
+		} catch (err) {
+			console.error('Unexpected error sending email:', err);
+		}
+	}
+});

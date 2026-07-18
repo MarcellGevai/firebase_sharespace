@@ -10,6 +10,8 @@
 	let address = $state('');
 	let date_of_birth = $state('');
 	let gender = $state('');
+	let acceptPrivacy = $state(false);
+	let subscribeNewsletter = $state(false);
 
 	let errorMsg = $state('');
 	let isSubmitting = $state(false);
@@ -44,8 +46,8 @@
 
 	async function handleRegister(e: Event) {
 		e.preventDefault();
-		if (!name || !username || !email || !password || !address || !date_of_birth || !gender) {
-			errorMsg = 'Kérjük, tölts ki minden kötelező mezőt!';
+		if (!name || !username || !email || !password || !address || !date_of_birth || !gender || !acceptPrivacy) {
+			errorMsg = 'Kérjük, tölts ki minden kötelező mezőt, és fogadd el az adatkezelési nyilatkozatot!';
 			return;
 		}
 
@@ -66,7 +68,7 @@
 		errorMsg = '';
 
 		try {
-			await register({ name, username, email, password, address, date_of_birth, gender });
+			await register({ name, username, email, password, address, date_of_birth, gender, newsletterSubscribed: subscribeNewsletter });
 			registrationSuccess = true;
 		} catch (err) {
 			errorMsg = authErrorMessage(err);
@@ -193,6 +195,21 @@
 			{#if errorMsg}
 				<p class="text-sm text-want bg-want-soft p-3 rounded-lg text-center font-medium border border-want-line mt-4">{errorMsg}</p>
 			{/if}
+
+			<div class="space-y-3 pt-4">
+				<label class="flex items-start gap-3 cursor-pointer">
+					<input type="checkbox" bind:checked={acceptPrivacy} class="mt-1 w-4 h-4 text-primary bg-surface border-line rounded focus:ring-primary" />
+					<span class="text-sm text-ink">
+						Elolvastam és elfogadom az <a href="#" class="text-primary hover:underline font-semibold" target="_blank">Adatkezelési nyilatkozatot</a>. *
+					</span>
+				</label>
+				<label class="flex items-start gap-3 cursor-pointer">
+					<input type="checkbox" bind:checked={subscribeNewsletter} class="mt-1 w-4 h-4 text-primary bg-surface border-line rounded focus:ring-primary" />
+					<span class="text-sm text-ink">
+						Szeretnék értesülni az újdonságokról (Feliratkozás a hírlevélre)
+					</span>
+				</label>
+			</div>
 
 			<button type="submit" disabled={isSubmitting} class="w-full py-3 px-4 bg-primary hover:bg-primary-hover text-primary-fg font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6">
 				{isSubmitting ? 'Regisztráció folyamatban...' : 'Regisztráció'}

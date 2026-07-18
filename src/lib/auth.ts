@@ -143,6 +143,7 @@ export type RegisterInput = {
 	address: string;
 	date_of_birth: string;
 	gender: string;
+	newsletterSubscribed: boolean;
 };
 
 export async function register(input: RegisterInput): Promise<void> {
@@ -182,7 +183,8 @@ export async function register(input: RegisterInput): Promise<void> {
 		date_of_birth: input.date_of_birth,
 		gender: input.gender,
 		latitude: coords?.lat ?? null,
-		longitude: coords?.lon ?? null
+		longitude: coords?.lon ?? null,
+		newsletterSubscribed: input.newsletterSubscribed
 	});
 
 	// displayName is the public handle, not the legal name: it surfaces in

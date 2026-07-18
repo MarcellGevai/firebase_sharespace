@@ -24,6 +24,7 @@ export type User = {
 	gender?: string;
 	latitude?: number | null;
 	longitude?: number | null;
+	newsletterSubscribed?: boolean;
 };
 
 export type ListingType = 'ITEM' | 'SERVICE';

@@ -10,7 +10,8 @@
 	import { getWantsByRequester, syncRequesterSnapshotToWants } from '$lib/data/wants';
 	import { syncOwnerSnapshotToListings } from '$lib/data/listings';
 	import { refreshProfile } from '$lib/auth';
-	import { Star, Pencil, Home, Package, Search, Dices, Check, X } from 'lucide-svelte';
+	import { functions } from '$lib/firebase';
+	import { Star, Pencil, Home, Package, Search, Dices, Check, X, CreditCard } from 'lucide-svelte';
 	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
 	import RequestModal from '$lib/components/RequestModal.svelte';
 	import WantCard from '$lib/components/WantCard.svelte';
@@ -103,6 +104,32 @@
 	async function reloadProfile() {
 		if (!profile) return;
 		profile = await getUserProfile(profile.id);
+	}
+
+	let stripeLoading = $state(false);
+	async function setupStripe() {
+		if (stripeLoading) return;
+		stripeLoading = true;
+		try {
+			const { httpsCallable } = await import('firebase/functions');
+			const createStripeAccount = httpsCallable(functions, 'createStripeAccount');
+			
+			const returnUrl = window.location.href; // Refresh to this page
+			
+			const result = await createStripeAccount({ returnUrl });
+			const data = result.data as { url?: string };
+			
+			if (data?.url) {
+				window.location.href = data.url;
+			} else {
+				alert('Nem sikerült generálni a Stripe linket.');
+			}
+		} catch (error) {
+			console.error('Stripe setup error:', error);
+			alert('Hiba történt a Stripe beállítása közben.');
+		} finally {
+			stripeLoading = false;
+		}
 	}
 
 	function formatDate(ts: unknown): string {
@@ -256,6 +283,31 @@
 							<p class="text-sm text-ink break-words">{profile.address}</p>
 							<p class="text-xs text-faint mt-0.5">Csak te látod – másoknak csak a település jelenik meg.</p>
 						</div>
+					</div>
+				{/if}
+
+				{#if isOwnProfile}
+					<div class="mt-4 w-full border-t border-line pt-4 text-left">
+						<h3 class="text-sm font-semibold text-ink mb-2">Fizetési beállítások</h3>
+						{#if !profile.stripeAccountId}
+							<button
+								onclick={setupStripe}
+								disabled={stripeLoading}
+								class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors flex justify-center items-center gap-2"
+							>
+								{#if stripeLoading}
+									<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									Töltés...
+								{:else}
+									<CreditCard class="w-4 h-4" /> Fizetés fogadása (Stripe beállítása)
+								{/if}
+							</button>
+							<p class="text-xs text-faint mt-2">Állítsd be a Stripe fiókodat, hogy másoktól online fizetéseket fogadhass.</p>
+						{:else}
+							<div class="w-full p-3 bg-green-50 text-green-700 rounded-lg text-sm flex items-center justify-center font-medium border border-green-200">
+								<Check class="w-4 h-4 mr-1.5"/> Stripe fiók csatlakoztatva
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>

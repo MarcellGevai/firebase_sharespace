@@ -11,6 +11,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import Stripe from 'stripe';
 
 initializeApp();
 const db = getFirestore();
@@ -276,4 +277,49 @@ export const sendWeeklyNewsletter = onSchedule('every monday 10:00', async (even
 			}
 		}
 	}
+});
+
+export const createStripeAccount = onCall(async (request) => {
+	if (!request.auth) {
+		throw new HttpsError('unauthenticated', 'A funkcióhoz be kell jelentkezned.');
+	}
+
+	const uid = request.auth.uid;
+	const returnUrl = request.data.returnUrl;
+	if (!returnUrl) {
+		throw new HttpsError('invalid-argument', 'A returnUrl megadása kötelező.');
+	}
+
+	const SECRET_STRIPE_KEY = process.env.SECRET_STRIPE_KEY;
+	if (!SECRET_STRIPE_KEY) {
+		console.error('SECRET_STRIPE_KEY is not defined in the environment.');
+		throw new HttpsError('internal', 'Stripe konfigurációs hiba.');
+	}
+
+	const stripe = new Stripe(SECRET_STRIPE_KEY);
+
+	const userRef = db.collection('users').doc(uid);
+	const userSnap = await userRef.get();
+	const userData = userSnap.data();
+
+	let stripeAccountId = userData?.stripeAccountId;
+
+	if (!stripeAccountId) {
+		// Create a new Express account
+		const account = await stripe.accounts.create({ type: 'express' });
+		stripeAccountId = account.id;
+		
+		// Save it to Firestore
+		await userRef.update({ stripeAccountId });
+	}
+
+	// Create an account link for onboarding
+	const accountLink = await stripe.accountLinks.create({
+		account: stripeAccountId,
+		refresh_url: returnUrl,
+		return_url: returnUrl,
+		type: 'account_onboarding',
+	});
+
+	return { url: accountLink.url };
 });

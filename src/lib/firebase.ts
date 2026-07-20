@@ -5,6 +5,7 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { getFunctions, type Functions } from 'firebase/functions';
 
 const firebaseConfig = {
 	apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -22,4 +23,5 @@ export const auth: Auth = getAuth(app);
 // firebase.json so app writes and deployed rules/indexes target the same DB.
 export const db: Firestore = getFirestore(app, 'sharespace-db');
 export const storage: FirebaseStorage = getStorage(app);
+export const functions: Functions = getFunctions(app, 'us-central1');
 export const googleProvider = new GoogleAuthProvider();

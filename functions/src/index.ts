@@ -323,3 +323,66 @@ export const createStripeAccount = onCall(async (request) => {
 
 	return { url: accountLink.url };
 });
+
+export const createRentHold = onCall(async (request) => {
+	if (!request.auth) {
+		throw new HttpsError('unauthenticated', 'A funkcióhoz be kell jelentkezned.');
+	}
+
+	const { listingId, rentalDays } = request.data;
+	if (!listingId || !rentalDays || rentalDays <= 0) {
+		throw new HttpsError('invalid-argument', 'Érvénytelen listázás vagy bérlési idő.');
+	}
+
+	const SECRET_STRIPE_KEY = process.env.SECRET_STRIPE_KEY;
+	if (!SECRET_STRIPE_KEY) {
+		console.error('SECRET_STRIPE_KEY is not defined in the environment.');
+		throw new HttpsError('internal', 'Stripe konfigurációs hiba.');
+	}
+
+	const stripe = new Stripe(SECRET_STRIPE_KEY);
+
+	// Fetch listing
+	const listingSnap = await db.collection('listings').doc(listingId).get();
+	if (!listingSnap.exists) {
+		throw new HttpsError('not-found', 'A hirdetés nem található.');
+	}
+	const listing = listingSnap.data()!;
+	
+	if (!listing.price_per_day) {
+		throw new HttpsError('failed-precondition', 'A hirdetésnek nincs napi ára megadva.');
+	}
+
+	// Fetch owner
+	const ownerId = listing.owner_id;
+	const ownerSnap = await db.collection('users').doc(ownerId).get();
+	const owner = ownerSnap.data();
+
+	if (!owner?.stripeAccountId) {
+		throw new HttpsError('failed-precondition', 'A tulajdonos még nem állította be a fizetés fogadását.');
+	}
+
+	// Calculate amount (HUF is an integer currency)
+	const totalAmount = Math.round(listing.price_per_day * rentalDays);
+
+	try {
+		// Create PaymentIntent with manual capture (Auth and Hold)
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: totalAmount,
+			currency: 'huf',
+			payment_method_types: ['card'],
+			capture_method: 'manual', // CRITICAL: This places a hold on the card
+			transfer_data: {
+				destination: owner.stripeAccountId
+			}
+		});
+
+		return {
+			client_secret: paymentIntent.client_secret,
+			id: paymentIntent.id
+		};
+	} catch (error) {
+		console.error('Stripe PaymentIntent error:', error);
+		throw new HttpsError('internal', 'Nem sikerült létrehozni a fizetési tranzakciót.');
+	}
+});

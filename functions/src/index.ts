@@ -216,7 +216,6 @@ export const sendRentalEndEmail = onDocumentUpdated('requests/{id}', async (even
 			console.error('Unexpected error sending email:', err);
 		}
 	}
-	}
 });
 
 export const sendWeeklyNewsletter = onSchedule('every monday 10:00', async (event) => {

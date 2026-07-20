@@ -10,7 +10,7 @@ import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 initializeApp();
 const db = getFirestore();
@@ -131,6 +131,22 @@ export const sendRentalEndEmail = onDocumentUpdated('requests/{id}', async (even
 	
 	// Transition: RETURN_INITIATED -> RETURN_COMPLETED
 	if (before.handover_status === 'RETURN_INITIATED' && after.handover_status === 'RETURN_COMPLETED') {
+		// 1. Create in-app notifications
+		const notifBase = {
+			type: 'SYSTEM',
+			title: 'Visszaadás sikeres',
+			body: 'A hirdetés/igény tárgya sikeresen visszaadva.',
+			link: `/inbox/${event.params.id}`,
+			is_read: false,
+			created_at: FieldValue.serverTimestamp()
+		};
+
+		await Promise.all([
+			db.collection('notifications').add({ ...notifBase, user_id: after.owner_id }),
+			db.collection('notifications').add({ ...notifBase, user_id: after.requester_id })
+		]);
+
+		// 2. Send email receipts
 		const { Resend } = await import('resend');
 		
 		const RESEND_API_KEY = process.env.RESEND_API_KEY;

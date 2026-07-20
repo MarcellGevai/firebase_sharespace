@@ -189,11 +189,13 @@ service cloud.firestore {
 		}
 		function initReturn() {
 			return resource.data.handover_status == 'HANDOVER_COMPLETED'
+				&& uid() == resource.data.requester_id
 				&& request.resource.data.handover_status == 'RETURN_INITIATED'
 				&& request.resource.data.return_initiated_at == request.time;
 		}
 		function acceptReturn() {
 			return resource.data.handover_status == 'RETURN_INITIATED'
+				&& uid() == resource.data.owner_id
 				&& request.resource.data.handover_status == 'RETURN_COMPLETED'
 				&& request.resource.data.actual_rental_end == request.time
 				&& request.time < resource.data.return_initiated_at + duration.value(5, 'm');

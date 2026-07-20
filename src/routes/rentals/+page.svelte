@@ -8,6 +8,7 @@
 	import { getListing } from '$lib/data/listings';
 	import { chatUrl } from '$lib/chat';
 	import { Clock, CheckCircle2, ArrowRight } from 'lucide-svelte';
+	import DefaultImage from '$lib/components/DefaultImage.svelte';
 	import CollapsibleSection from '$lib/components/CollapsibleSection.svelte';
 	import type { DealRequest } from '$lib/types';
 
@@ -16,6 +17,7 @@
 		otherUserName: string;
 		listingTitle: string;
 		listingImage: string;
+		listingCategory: string;
 		isOwner: boolean;
 	};
 
@@ -84,6 +86,7 @@
 						// fact. Deals predating the snapshot fall back to the lookup.
 						listingTitle: request.item_title || listing?.title || 'Törölt hirdetés',
 						listingImage: request.item_image || listing?.image_url || '',
+						listingCategory: listing?.category || '',
 						isOwner
 					};
 				})
@@ -115,11 +118,15 @@
 		href={chatUrl(row.request.listing_id, row.isOwner ? row.request.requester_id : row.request.owner_id)}
 		class="flex items-center gap-4 p-4 hover:bg-raised transition-colors"
 	>
-		<img
-			src={row.listingImage}
-			alt={row.listingTitle}
-			class="w-14 h-14 rounded-xl object-cover bg-raised flex-shrink-0"
-		/>
+		{#if row.listingImage}
+			<img
+				src={row.listingImage}
+				alt={row.listingTitle}
+				class="w-14 h-14 rounded-xl object-cover bg-raised flex-shrink-0"
+			/>
+		{:else}
+			<DefaultImage category={row.listingCategory} class="w-14 h-14 rounded-xl flex-shrink-0" />
+		{/if}
 		<div class="flex-1 min-w-0">
 			<p class="font-semibold text-ink truncate">{row.listingTitle}</p>
 			<p class="text-xs text-muted">

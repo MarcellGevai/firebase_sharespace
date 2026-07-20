@@ -2,6 +2,7 @@
 	import { Search, MessageCircle, Map, LayoutList, Clock, Sun, Moon, LogOut } from 'lucide-svelte';
 	import { theme, toggleTheme } from '$lib/theme';
 	import { goto } from '$app/navigation';
+	import DefaultImage from './DefaultImage.svelte';
 	import { page } from '$app/stores';
 	import type { User, Listing } from '$lib/types';
 	import { displayName } from '$lib/username';
@@ -101,7 +102,7 @@
 	function goToListing(listing: Listing) {
 		showResults = false;
 		searchQuery = '';
-		goto(`/feed?q=${encodeURIComponent(listing.title)}`);
+		goto(`/listing/${listing.id}`);
 	}
 </script>
 
@@ -193,7 +194,11 @@
 									onmousedown={() => goToListing(l)}
 									class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary-soft transition-colors text-left"
 								>
-									<img src={l.image_url} alt={l.title} class="w-8 h-8 rounded-lg object-cover bg-raised flex-shrink-0" />
+									{#if l.image_url}
+										<img src={l.image_url} alt={l.title} class="w-8 h-8 rounded-lg object-cover bg-raised flex-shrink-0" />
+									{:else}
+										<DefaultImage category={l.category} class="w-8 h-8 rounded-lg flex-shrink-0" />
+									{/if}
 									<span class="text-sm font-medium text-ink truncate">{l.title}</span>
 								</button>
 							{/each}

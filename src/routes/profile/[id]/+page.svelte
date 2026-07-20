@@ -14,6 +14,7 @@
 	import { Star, Pencil, Home, Package, Search, Dices, Check, X, CreditCard } from 'lucide-svelte';
 	import EditProfileModal from '$lib/components/EditProfileModal.svelte';
 	import RequestModal from '$lib/components/RequestModal.svelte';
+	import DefaultImage from '$lib/components/DefaultImage.svelte';
 	import WantCard from '$lib/components/WantCard.svelte';
 	import CollapsibleSection from '$lib/components/CollapsibleSection.svelte';
 	import { displayName } from '$lib/username';
@@ -381,12 +382,16 @@
 											: 'hover:shadow-md hover:border-primary-line transition-all'}"
 									>
 										<div class="aspect-square w-full bg-raised overflow-hidden">
-											<img
-												src={listing.image_url}
-												alt={listing.title}
-												class="w-full h-full object-cover"
-												loading="lazy"
-											/>
+											{#if listing.image_url}
+												<img
+													src={listing.image_url}
+													alt={listing.title}
+													class="w-full h-full object-cover"
+													loading="lazy"
+												/>
+											{:else}
+												<DefaultImage category={listing.category} class="w-full h-full" />
+											{/if}
 										</div>
 										<div class="p-2.5">
 											<p class="text-sm font-semibold text-ink truncate">{listing.title}</p>

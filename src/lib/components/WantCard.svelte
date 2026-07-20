@@ -2,6 +2,7 @@
 	import type { Want } from '$lib/types';
 	import { formatDistance } from '$lib/distance';
 	import { timeAgoHU } from '$lib/timestamps';
+	import DefaultImage from './DefaultImage.svelte';
 	import RequestModal from './RequestModal.svelte';
 	import { Search, Calendar, MapPin, HandCoins } from 'lucide-svelte';
 
@@ -61,8 +62,8 @@
 	</div>
 
 	<!-- Image Gallery -->
-	{#if want.image_urls && want.image_urls.length > 0}
-		<div class="relative aspect-[4/3] w-full overflow-hidden bg-raised group border-b-2 border-want-line">
+	<div class="relative aspect-[4/3] w-full overflow-hidden bg-raised group border-b-2 border-want-line">
+		{#if want.image_urls && want.image_urls.length > 0}
 			<div class="flex overflow-x-auto snap-x snap-mandatory h-full w-full pointer-events-auto" style="scrollbar-width: none;">
 				{#each want.image_urls as imgUrl}
 					<div class="snap-center min-w-full h-full shrink-0">
@@ -74,8 +75,14 @@
 					</div>
 				{/each}
 			</div>
-		</div>
-	{/if}
+		{:else}
+			<DefaultImage 
+				category={want.category} 
+				type="request" 
+				class="w-full h-full"
+			/>
+		{/if}
+	</div>
 
 	<!-- Content -->
 	<div class="px-4 pb-4 pt-4">

@@ -5,6 +5,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import DealManager from '$lib/components/DealManager.svelte';
+	import DefaultImage from '$lib/components/DefaultImage.svelte';
 	import { parseChatId, chatUrl } from '$lib/chat';
 	import { currentUser } from '$lib/auth';
 	import { getUserProfile } from '$lib/data/users';
@@ -160,8 +161,12 @@
 
 		<!-- Listing Context Banner -->
 		{#if chatContext.listing}
-			<a href="/" class="flex items-center gap-3 p-3 mx-4 mt-4 bg-raised hover:bg-raised transition-colors rounded-xl border border-line shrink-0">
-				<img src={chatContext.listing.image_url} alt="Listing" class="w-12 h-12 rounded-lg object-cover bg-raised" />
+			<a href="/listing/{chatContext.listing.id}" class="flex items-center gap-3 p-3 mx-4 mt-4 bg-raised hover:bg-raised transition-colors rounded-xl border border-line shrink-0">
+				{#if chatContext.listing.image_url}
+					<img src={chatContext.listing.image_url} alt="Listing" class="w-12 h-12 rounded-lg object-cover bg-raised" />
+				{:else}
+					<DefaultImage category={chatContext.listing.category} class="w-12 h-12 rounded-lg" />
+				{/if}
 				<div>
 					<p class="text-xs font-bold text-muted uppercase tracking-wide">{chatContext.listing.type}</p>
 					<h3 class="font-semibold text-ink">{chatContext.listing.title}</h3>

@@ -10,6 +10,7 @@
 	import { httpsCallable } from 'firebase/functions';
 	import { sendMessage } from '$lib/data/messages';
 	import { createNotification } from '$lib/data/notifications';
+	import DefaultImage from './DefaultImage.svelte';
 
 	/**
 	 * Two directions through the same deal:
@@ -331,10 +332,16 @@
 							{/if}
 						</div>
 					{:else}
-						<img src={listing.image_url} alt={listing.title} class="w-16 h-16 rounded-lg object-cover bg-raised" />
-						<div>
-							<h3 class="font-semibold text-ink">{listing.title}</h3>
-							<p class="text-xs text-muted uppercase font-semibold tracking-wide">{listing.type}</p>
+						<div class="flex items-center gap-3">
+							{#if listing?.image_url}
+								<img src={listing.image_url} alt={listing?.title} class="w-16 h-16 rounded-lg object-cover bg-raised" />
+							{:else}
+								<DefaultImage category={listing?.category} type={isOffer ? 'request' : 'listing'} class="w-16 h-16 rounded-lg" />
+							{/if}
+							<div class="flex-1 min-w-0">
+								<h3 class="font-semibold text-ink">{listing.title}</h3>
+								<p class="text-xs text-muted uppercase font-semibold tracking-wide">{listing.type}</p>
+							</div>
 						</div>
 					{/if}
 				</div>

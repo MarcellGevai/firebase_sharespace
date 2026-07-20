@@ -6,6 +6,7 @@
 	import { formatDistance } from '$lib/distance';
 	import { timeAgoHU } from '$lib/timestamps';
 	import { MapPin, CalendarClock, MessageCircle } from 'lucide-svelte';
+	import DefaultImage from './DefaultImage.svelte';
 
 	// distanceKm is null when either side has no coordinates, or when the viewer
 	// has no baseline (signed out / no home coords) - render nothing then.
@@ -78,12 +79,17 @@
 					</div>
 				{/each}
 			</div>
-		{:else}
+		{:else if listing.image_url}
 			<!-- Single Image -->
 			<img 
 				src={listing.image_url} 
 				alt={listing.title} 
 				class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+			/>
+		{:else}
+			<DefaultImage 
+				category={listing.category} 
+				class="w-full h-full group-hover:scale-105 transition-transform duration-500"
 			/>
 		{/if}
 		<!-- Chips over the photo are dark glass, not brand green. They're labels,

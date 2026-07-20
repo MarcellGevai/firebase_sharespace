@@ -115,7 +115,7 @@ export type DealRequest = {
 	status: RequestStatus;
 	price_offer: number;
 	paymentIntentId?: string;
-	paymentStatus?: 'held' | 'captured' | 'refunded';
+	paymentStatus?: 'held' | 'captured' | 'refunded' | 'canceled';
 	// Pre-acceptance ping-pong negotiation: whoever this points to may currently
 	// accept/reject/modify the offer above. Absent on requests created before
 	// this field existed - treat missing as "owner_id" (today's default).

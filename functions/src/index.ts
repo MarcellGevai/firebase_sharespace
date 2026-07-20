@@ -386,3 +386,66 @@ export const createRentHold = onCall(async (request) => {
 		throw new HttpsError('internal', 'Nem sikerült létrehozni a fizetési tranzakciót.');
 	}
 });
+
+export const captureRentPayment = onCall(async (request) => {
+	if (!request.auth) {
+		throw new HttpsError('unauthenticated', 'A funkcióhoz be kell jelentkezned.');
+	}
+
+	const { paymentIntentId, requestId } = request.data;
+	if (!paymentIntentId || !requestId) {
+		throw new HttpsError('invalid-argument', 'Hiányzó paymentIntentId vagy requestId.');
+	}
+
+	const SECRET_STRIPE_KEY = process.env.SECRET_STRIPE_KEY;
+	if (!SECRET_STRIPE_KEY) {
+		throw new HttpsError('internal', 'Stripe konfigurációs hiba.');
+	}
+	const stripe = new Stripe(SECRET_STRIPE_KEY);
+
+	try {
+		await stripe.paymentIntents.capture(paymentIntentId);
+		
+		await db.collection('requests').doc(requestId).update({
+			paymentStatus: 'captured',
+			updated_at: FieldValue.serverTimestamp()
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error('Stripe Capture error:', error);
+		throw new HttpsError('internal', 'Nem sikerült véglegesíteni a fizetést.');
+	}
+});
+
+export const cancelRentPayment = onCall(async (request) => {
+	if (!request.auth) {
+		throw new HttpsError('unauthenticated', 'A funkcióhoz be kell jelentkezned.');
+	}
+
+	const { paymentIntentId, requestId } = request.data;
+	if (!paymentIntentId || !requestId) {
+		throw new HttpsError('invalid-argument', 'Hiányzó paymentIntentId vagy requestId.');
+	}
+
+	const SECRET_STRIPE_KEY = process.env.SECRET_STRIPE_KEY;
+	if (!SECRET_STRIPE_KEY) {
+		throw new HttpsError('internal', 'Stripe konfigurációs hiba.');
+	}
+	const stripe = new Stripe(SECRET_STRIPE_KEY);
+
+	try {
+		await stripe.paymentIntents.cancel(paymentIntentId);
+		
+		await db.collection('requests').doc(requestId).update({
+			paymentStatus: 'canceled',
+			status: 'REJECTED', // Or ABORTED if it's already accepted but handover failed
+			updated_at: FieldValue.serverTimestamp()
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error('Stripe Cancel error:', error);
+		throw new HttpsError('internal', 'Nem sikerült törölni a fizetési tranzakciót.');
+	}
+});

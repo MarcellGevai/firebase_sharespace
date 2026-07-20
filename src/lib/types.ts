@@ -36,6 +36,7 @@ export type Listing = {
 	title: string;
 	description: string;
 	image_url: string;
+	image_urls?: string[];
 	type: ListingType;
 	status: ListingStatus;
 	category?: string;
@@ -72,6 +73,7 @@ export type Want = {
 	title: string;
 	description: string;
 	category?: string;
+	image_urls?: string[];
 	date_from: string;
 	date_to: string;
 	price_min: number;

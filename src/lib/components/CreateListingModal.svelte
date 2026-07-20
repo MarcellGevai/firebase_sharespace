@@ -20,7 +20,8 @@
 	let description = $state('');
 	let isSubmitting = $state(false);
 	let errorMsg = $state('');
-	let imageFile = $state<File | null>(null);
+	let errorMsg = $state('');
+	let imageFiles = $state<File[]>([]);
 
 	// Location: three ways to set where the listing appears on the map.
 	let locationMode = $state<'current' | 'home' | 'custom'>('home');
@@ -139,8 +140,8 @@
 
 	function handleImageChange(e: Event) {
 		const target = e.target as HTMLInputElement;
-		if (target.files && target.files.length > 0) {
-			imageFile = target.files[0];
+		if (target.files) {
+			imageFiles = Array.from(target.files);
 		}
 	}
 
@@ -182,14 +183,21 @@
 		errorMsg = '';
 
 		try {
-			// 1. Upload image to Firebase Storage (if provided).
+			// 1. Upload images to Firebase Storage (if provided).
+			let image_urls: string[] = [];
 			let image_url = '';
-			if (imageFile) {
-				const ext = imageFile.name.split('.').pop() || 'jpg';
-				const path = `listings/${currentUser.id}/${uuidv4()}.${ext}`;
-				const r = storageRef(storage, path);
-				await uploadBytes(r, imageFile);
-				image_url = await getDownloadURL(r);
+			if (imageFiles.length > 0) {
+				const uploadPromises = imageFiles.map(async (file) => {
+					const ext = file.name.split('.').pop() || 'jpg';
+					const path = `listings/${currentUser.id}/${uuidv4()}.${ext}`;
+					const r = storageRef(storage, path);
+					await uploadBytes(r, file);
+					return await getDownloadURL(r);
+				});
+				image_urls = await Promise.all(uploadPromises);
+				if (image_urls.length > 0) {
+					image_url = image_urls[0];
+				}
 			}
 
 			// 2. Fallback stock image based on category/type when none uploaded.
@@ -218,6 +226,7 @@
 				title,
 				description,
 				image_url,
+				image_urls,
 				type: type as 'ITEM' | 'SERVICE',
 				category,
 				// Optional: categories without a taxonomy ('Egyéb') never set one.
@@ -254,6 +263,7 @@
 			availabilityType = 'ONGOING';
 			availableFrom = '';
 			availableUntil = '';
+			imageFiles = [];
 			imageFile = null;
 			type = 'ITEM';
 			
@@ -397,8 +407,8 @@
 
 					<!-- Image & Location -->
 					<div class="space-y-1.5">
-						<label class="block text-sm font-semibold text-ink">Kép feltöltése (Opcionális)</label>
-						<input type="file" accept="image/*" onchange={handleImageChange} class="w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary-soft file:text-primary hover:file:bg-primary-soft transition-colors" />
+						<label class="block text-sm font-semibold text-ink">Képek feltöltése (Opcionális)</label>
+						<input type="file" multiple accept="image/*" onchange={handleImageChange} class="w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary-soft file:text-primary hover:file:bg-primary-soft transition-colors" />
 					</div>
 
 					<div class="space-y-1.5">

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { X, Search, Tag, Info, MapPin, House, Loader2 } from 'lucide-svelte';
+	import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+	import { v4 as uuidv4 } from 'uuid';
+	import { storage } from '$lib/firebase';
 	import { createWant } from '$lib/data/wants';
 	import { CATEGORIES } from '$lib/categories';
 	import { searchAddress, geocodeAddress, type AddressSuggestion } from '$lib/geocode';
@@ -16,6 +19,7 @@
 	let description = $state('');
 	let isSubmitting = $state(false);
 	let errorMsg = $state('');
+	let imageFiles = $state<File[]>([]);
 
 	// Where the request applies. Defaults to the user's home so the common case
 	// ("looking for a drill near me") needs no typing, but stays overridable.
@@ -88,6 +92,13 @@
 		showSuggestions = false;
 	}
 
+	function handleImageChange(e: Event) {
+		const target = e.target as HTMLInputElement;
+		if (target.files) {
+			imageFiles = Array.from(target.files);
+		}
+	}
+
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		if (!title || !category || !dateFrom || !dateTo) {
@@ -137,10 +148,23 @@
 				return;
 			}
 
+			let image_urls: string[] = [];
+			if (imageFiles.length > 0) {
+				const uploadPromises = imageFiles.map(async (file) => {
+					const ext = file.name.split('.').pop() || 'jpg';
+					const path = `wants/${currentUser.id}/${uuidv4()}.${ext}`;
+					const r = storageRef(storage, path);
+					await uploadBytes(r, file);
+					return await getDownloadURL(r);
+				});
+				image_urls = await Promise.all(uploadPromises);
+			}
+
 			await createWant(currentUser, {
 				title,
 				description,
 				category,
+				image_urls,
 				date_from: dateFrom,
 				date_to: dateTo,
 				price_min: Number(priceMin),
@@ -163,6 +187,7 @@
 			locationAddress = '';
 			locationLat = null;
 			locationLon = null;
+			imageFiles = [];
 
 			if (onSuccess) onSuccess();
 			goto('/feed');
@@ -344,6 +369,12 @@
 								required
 							/>
 						</div>
+					</div>
+
+					<!-- Image Upload -->
+					<div class="space-y-1.5">
+						<label class="block text-sm font-semibold text-ink">Képek feltöltése (Opcionális)</label>
+						<input type="file" multiple accept="image/*" onchange={handleImageChange} class="w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary-soft file:text-primary hover:file:bg-primary-soft transition-colors" />
 					</div>
 
 					<!-- Description -->

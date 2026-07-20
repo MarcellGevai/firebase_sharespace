@@ -79,7 +79,7 @@
 					</div>
 				{/each}
 			</div>
-		{:else if listing.image_url}
+		{:else if listing.image_url && !listing.image_url.includes('unsplash.com')}
 			<!-- Single Image -->
 			<img 
 				src={listing.image_url} 

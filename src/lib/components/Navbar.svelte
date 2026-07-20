@@ -189,18 +189,14 @@
 						{#if listingResults.length > 0}
 							<div class="px-3 py-2 text-xs font-semibold text-faint uppercase tracking-wide bg-raised">Hirdetések</div>
 							{#each listingResults as l (l.id)}
-								<button
-									type="button"
-									onmousedown={() => goToListing(l)}
-									class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary-soft transition-colors text-left"
-								>
-									{#if l.image_url}
+								<a href={`/listing/${l.id}`} onclick={closeSearch} class="flex items-center gap-3 p-3 hover:bg-surface/60 transition-colors">
+									{#if l.image_url && !l.image_url.includes('unsplash.com')}
 										<img src={l.image_url} alt={l.title} class="w-8 h-8 rounded-lg object-cover bg-raised flex-shrink-0" />
 									{:else}
 										<DefaultImage category={l.category} class="w-8 h-8 rounded-lg flex-shrink-0" />
 									{/if}
 									<span class="text-sm font-medium text-ink truncate">{l.title}</span>
-								</button>
+								</a>
 							{/each}
 						{/if}
 					{/if}

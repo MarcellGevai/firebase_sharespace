@@ -382,7 +382,7 @@
 											: 'hover:shadow-md hover:border-primary-line transition-all'}"
 									>
 										<div class="aspect-square w-full bg-raised overflow-hidden">
-											{#if listing.image_url}
+											{#if listing.image_url && !listing.image_url.includes('unsplash.com')}
 												<img
 													src={listing.image_url}
 													alt={listing.title}

@@ -162,7 +162,7 @@
 		<!-- Listing Context Banner -->
 		{#if chatContext.listing}
 			<a href="/listing/{chatContext.listing.id}" class="flex items-center gap-3 p-3 mx-4 mt-4 bg-raised hover:bg-raised transition-colors rounded-xl border border-line shrink-0">
-				{#if chatContext.listing.image_url}
+				{#if chatContext.listing.image_url && !chatContext.listing.image_url.includes('unsplash.com')}
 					<img src={chatContext.listing.image_url} alt="Listing" class="w-12 h-12 rounded-lg object-cover bg-raised" />
 				{:else}
 					<DefaultImage category={chatContext.listing.category} class="w-12 h-12 rounded-lg" />

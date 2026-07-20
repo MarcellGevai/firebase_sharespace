@@ -333,7 +333,7 @@
 						</div>
 					{:else}
 						<div class="flex items-center gap-3">
-							{#if listing?.image_url}
+							{#if listing?.image_url && !listing.image_url.includes('unsplash.com')}
 								<img src={listing.image_url} alt={listing?.title} class="w-16 h-16 rounded-lg object-cover bg-raised" />
 							{:else}
 								<DefaultImage category={listing?.category} type={isOffer ? 'request' : 'listing'} class="w-16 h-16 rounded-lg" />

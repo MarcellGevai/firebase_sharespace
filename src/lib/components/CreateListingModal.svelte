@@ -199,16 +199,6 @@
 				}
 			}
 
-			// 2. Fallback stock image based on category/type when none uploaded.
-			if (!image_url) {
-				image_url = 'https://images.unsplash.com/photo-1513506003901-1e6a229e9d15?auto=format&fit=crop&w=600&q=80';
-				if (category === 'Szerszámok') image_url = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80';
-				if (category === 'Elektronika') image_url = 'https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=600&q=80';
-				if (category === 'Kert') image_url = 'https://images.unsplash.com/photo-1592424005686-2f085e3474fc?auto=format&fit=crop&w=600&q=80';
-				if (category === 'Sport') image_url = 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=600&q=80';
-				if (type === 'SERVICE') image_url = 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=600&q=80';
-			}
-
 			// 3. Resolve coordinates so the listing can appear on the map: reuse the
 			// coordinates already picked (current location / home / chosen suggestion),
 			// falling back to a best-effort geocode if the user typed a custom address

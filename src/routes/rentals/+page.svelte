@@ -118,7 +118,7 @@
 		href={chatUrl(row.request.listing_id, row.isOwner ? row.request.requester_id : row.request.owner_id)}
 		class="flex items-center gap-4 p-4 hover:bg-raised transition-colors"
 	>
-		{#if row.listingImage}
+		{#if row.listingImage && !row.listingImage.includes('unsplash.com')}
 			<img
 				src={row.listingImage}
 				alt={row.listingTitle}

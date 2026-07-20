@@ -20,7 +20,6 @@
 	let description = $state('');
 	let isSubmitting = $state(false);
 	let errorMsg = $state('');
-	let errorMsg = $state('');
 	let imageFiles = $state<File[]>([]);
 
 	// Location: three ways to set where the listing appears on the map.

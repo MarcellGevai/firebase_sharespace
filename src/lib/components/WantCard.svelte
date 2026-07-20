@@ -60,8 +60,25 @@
 		</span>
 	</div>
 
+	<!-- Image Gallery -->
+	{#if want.image_urls && want.image_urls.length > 0}
+		<div class="relative aspect-[4/3] w-full overflow-hidden bg-raised group border-b-2 border-want-line">
+			<div class="flex overflow-x-auto snap-x snap-mandatory h-full w-full pointer-events-auto" style="scrollbar-width: none;">
+				{#each want.image_urls as imgUrl}
+					<div class="snap-center min-w-full h-full shrink-0">
+						<img 
+							src={imgUrl} 
+							alt={want.title} 
+							class="w-full h-full object-cover" 
+						/>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<!-- Content -->
-	<div class="px-4 pb-4">
+	<div class="px-4 pb-4 pt-4">
 		<h2 class="text-xl font-bold text-ink mb-1">{want.title}</h2>
 		{#if want.category}
 			<span class="inline-block text-[10px] font-semibold uppercase tracking-wide text-want bg-want-soft px-2 py-0.5 rounded-full mb-2">

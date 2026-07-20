@@ -64,12 +64,28 @@
 	</div>
 
 	<!-- Image -->
-	<div class="relative aspect-[4/3] w-full overflow-hidden bg-raised group">
-		<img 
-			src={listing.image_url} 
-			alt={listing.title} 
-			class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-		/>
+	<div class="relative aspect-[4/3] w-full bg-raised group overflow-hidden">
+		{#if listing.image_urls && listing.image_urls.length > 1}
+			<!-- Multiple Images -->
+			<div class="flex overflow-x-auto snap-x snap-mandatory h-full w-full pointer-events-auto" style="scrollbar-width: none;">
+				{#each listing.image_urls as imgUrl}
+					<div class="snap-center min-w-full h-full shrink-0">
+						<img 
+							src={imgUrl} 
+							alt={listing.title} 
+							class="w-full h-full object-cover" 
+						/>
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<!-- Single Image -->
+			<img 
+				src={listing.image_url} 
+				alt={listing.title} 
+				class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+			/>
+		{/if}
 		<!-- Chips over the photo are dark glass, not brand green. They're labels,
 		     not actions: filling them with the same green as the card's one real
 		     button leaves nothing on the card looking more important than anything

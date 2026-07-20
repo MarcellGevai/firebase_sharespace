@@ -65,7 +65,7 @@
 	</div>
 
 	<!-- Image -->
-	<div class="relative aspect-[4/3] w-full bg-raised group overflow-hidden">
+	<a href={`/listing/${listing.id}`} class="block relative aspect-[4/3] w-full bg-raised group overflow-hidden">
 		{#if listing.image_urls && listing.image_urls.length > 1}
 			<!-- Multiple Images -->
 			<div class="flex overflow-x-auto snap-x snap-mandatory h-full w-full pointer-events-auto" style="scrollbar-width: none;">
@@ -114,11 +114,13 @@
 				{/if}
 			</div>
 		{/if}
-	</div>
+	</a>
 
 	<!-- Content -->
 	<div class="p-4">
-		<h2 class="text-xl font-bold text-ink mb-2">{listing.title}</h2>
+		<a href={`/listing/${listing.id}`} class="block group/title">
+			<h2 class="text-xl font-bold text-ink mb-2 group-hover/title:text-primary transition-colors">{listing.title}</h2>
+		</a>
 		<p class="text-muted text-sm leading-relaxed mb-4 line-clamp-2">
 			{listing.description}
 		</p>

@@ -5,6 +5,8 @@ import {
 	collection,
 	addDoc,
 	getDocs,
+	getDoc,
+	doc,
 	query,
 	where,
 	orderBy,
@@ -97,4 +99,10 @@ export async function getWantsByRequester(requesterId: string): Promise<Want[]> 
 	return snap.docs
 		.sort((a, b) => createdMs(b.data().created_at) - createdMs(a.data().created_at))
 		.map((d) => ({ id: d.id, ...(d.data() as Omit<Want, 'id'>) }));
+}
+
+export async function getWant(id: string): Promise<Want | null> {
+	const snap = await getDoc(doc(db, 'wants', id));
+	if (!snap.exists()) return null;
+	return { id: snap.id, ...(snap.data() as Omit<Want, 'id'>) };
 }

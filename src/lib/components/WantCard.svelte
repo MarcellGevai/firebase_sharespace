@@ -62,7 +62,7 @@
 	</div>
 
 	<!-- Image Gallery -->
-	<div class="relative aspect-[4/3] w-full overflow-hidden bg-raised group border-b-2 border-want-line">
+	<a href={`/want/${want.id}`} class="block relative aspect-[4/3] w-full overflow-hidden bg-raised group border-b-2 border-want-line">
 		{#if want.image_urls && want.image_urls.length > 0}
 			<div class="flex overflow-x-auto snap-x snap-mandatory h-full w-full pointer-events-auto" style="scrollbar-width: none;">
 				{#each want.image_urls as imgUrl}
@@ -82,11 +82,13 @@
 				class="w-full h-full"
 			/>
 		{/if}
-	</div>
+	</a>
 
 	<!-- Content -->
 	<div class="px-4 pb-4 pt-4">
-		<h2 class="text-xl font-bold text-ink mb-1">{want.title}</h2>
+		<a href={`/want/${want.id}`} class="block group/title">
+			<h2 class="text-xl font-bold text-ink mb-2 group-hover/title:text-want transition-colors">{want.title}</h2>
+		</a>
 		{#if want.category}
 			<span class="inline-block text-[10px] font-semibold uppercase tracking-wide text-want bg-want-soft px-2 py-0.5 rounded-full mb-2">
 				{want.category}

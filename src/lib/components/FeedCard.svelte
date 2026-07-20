@@ -83,9 +83,13 @@
 				{listing.category}
 			</div>
 		{/if}
-		{#if listing.price_range}
+		{#if listing.price_range || listing.price_per_day}
 			<div class="absolute bottom-3 right-3 bg-black/55 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold text-white tracking-wide">
-				{listing.price_range}
+				{#if listing.price_per_day}
+					{listing.price_per_day} Ft/nap
+				{:else}
+					{listing.price_range}
+				{/if}
 			</div>
 		{/if}
 	</div>

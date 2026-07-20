@@ -57,22 +57,43 @@
 	);
 
 	$effect(() => {
-		if (isOpen && recommendedPrice === 0) {
-			// An offer has a stated budget to aim at; a listing doesn't, hence the
-			// placeholder suggestion the listing flow already used.
-			recommendedPrice = isOffer
-				? Math.round(((Number(want.price_min) || 0) + (Number(want.price_max) || 0)) / 2)
-				: Math.floor(Math.random() * 5000) + 1000;
-			priceOffer = recommendedPrice;
-			// Seed the dates from the window the requester asked for - most offers
-			// will simply take it.
+		if (isOpen) {
+			if (recommendedPrice === 0) {
+				if (isOffer) {
+					startDate = want.date_from ?? '';
+					endDate = want.date_to ?? '';
+				}
+			}
+
+			let newRec = 0;
 			if (isOffer) {
-				startDate = want.date_from ?? '';
-				endDate = want.date_to ?? '';
+				newRec = Math.round(((Number(want.price_min) || 0) + (Number(want.price_max) || 0)) / 2);
+			} else if (listing?.price_per_day) {
+				let days = 1;
+				if (startDate && endDate) {
+					const sDate = new Date(startDate);
+					const eDate = new Date(endDate);
+					if (!isNaN(sDate.getTime()) && !isNaN(eDate.getTime())) {
+						days = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 3600 * 24)));
+					}
+				}
+				newRec = days * listing.price_per_day;
+			} else {
+				newRec = recommendedPrice === 0 ? Math.floor(Math.random() * 5000) + 1000 : recommendedPrice;
+			}
+
+			if (newRec !== recommendedPrice) {
+				if (priceOffer === recommendedPrice || priceOffer === '' || priceOffer === 0) {
+					priceOffer = newRec;
+				}
+				recommendedPrice = newRec;
 			}
 		}
-		if (!isOpen) {
+		if (!isOpen && recommendedPrice !== 0) {
 			recommendedPrice = 0; // reset
+			priceOffer = '';
+			startDate = '';
+			endDate = '';
 		}
 	});
 

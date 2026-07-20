@@ -45,6 +45,7 @@ export type Listing = {
 	 * some categories offer none - both group under NO_SUBCATEGORY.
 	 */
 	subcategory?: string;
+	price_per_day?: number;
 	price_range?: string;
 	latitude?: number | null;
 	longitude?: number | null;

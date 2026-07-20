@@ -15,6 +15,7 @@
 	let title = $state('');
 	let category = $state('');
 	let subcategory = $state('');
+	let pricePerDay = $state<number | ''>('');
 	let priceRange = $state('');
 	let description = $state('');
 	let isSubmitting = $state(false);
@@ -221,6 +222,7 @@
 				category,
 				// Optional: categories without a taxonomy ('Egyéb') never set one.
 				subcategory: subcategory || undefined,
+				price_per_day: pricePerDay === '' ? undefined : Number(pricePerDay),
 				price_range: priceRange,
 				location_address,
 				latitude: coords?.lat ?? null,
@@ -240,6 +242,7 @@
 			title = '';
 			category = '';
 			subcategory = '';
+			pricePerDay = '';
 			priceRange = '';
 			description = '';
 			location_address = '';
@@ -364,6 +367,17 @@
 								</div>
 							</div>
 						{/if}
+
+						<div class="space-y-1.5">
+							<label for="pricePerDay" class="block text-sm font-semibold text-ink">Napi ár (Ft) (Opcionális)</label>
+							<input
+								type="number"
+								id="pricePerDay"
+								bind:value={pricePerDay}
+								placeholder="pl. 5000"
+								class="w-full px-4 py-2.5 bg-raised border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-all"
+							/>
+						</div>
 
 						<div class="space-y-1.5">
 							<label for="price" class="block text-sm font-semibold text-ink">Árkategória (Kölcsönzés) *</label>

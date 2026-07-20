@@ -2,6 +2,8 @@
 	import { Handshake, Undo2, Check, Star, Pencil } from 'lucide-svelte';
 	import HandoverModal from './HandoverModal.svelte';
 	import { handoverAction, reviseAcceptedDeal, modifyOffer } from '$lib/data/requests';
+	import { functions } from '$lib/firebase';
+	import { httpsCallable } from 'firebase/functions';
 
 	let { request, currentUser, otherUser }: { request: any, currentUser: any, otherUser: any } = $props();
 
@@ -58,6 +60,25 @@
 		actionInFlight = true;
 		try {
 			await handoverAction(request.id, actionType);
+
+			// Phase 3.2: Stripe Connect - Capture/Cancel
+			if (actionType === 'accept_handover' && request.paymentIntentId && request.paymentStatus === 'held') {
+				try {
+					const captureRentPayment = httpsCallable(functions, 'captureRentPayment');
+					await captureRentPayment({ paymentIntentId: request.paymentIntentId, requestId: request.id });
+				} catch (err) {
+					console.error('Failed to capture payment', err);
+					alert('Sikeres átadás, de a fizetés véglegesítése (Stripe) sikertelen volt. Kérjük jelezd a supportnak!');
+				}
+			} else if (actionType === 'reject_deal' && request.paymentIntentId && request.paymentStatus === 'held') {
+				try {
+					const cancelRentPayment = httpsCallable(functions, 'cancelRentPayment');
+					await cancelRentPayment({ paymentIntentId: request.paymentIntentId, requestId: request.id });
+				} catch (err) {
+					console.error('Failed to cancel payment', err);
+				}
+			}
+
 			// The parent page's live listener (watchRequestForConversation) picks up
 			// this write and updates `request` automatically - no reload needed.
 			showHandoverModal = false;
@@ -68,15 +89,26 @@
 			// window (enforced by the security rules) has elapsed. Roll the step
 			// back so the parties can restart it.
 			if (actionType === 'accept_handover' || actionType === 'accept_return') {
-				try {
-					await handoverAction(
-						request.id,
-						actionType === 'accept_handover' ? 'reset_handover' : 'reset_return'
-					);
-				} catch (e) {
-					console.error('reset failed', e);
+				if (actionType === 'accept_handover' && request.paymentIntentId && request.paymentStatus === 'held') {
+					try {
+						const cancelRentPayment = httpsCallable(functions, 'cancelRentPayment');
+						await cancelRentPayment({ paymentIntentId: request.paymentIntentId, requestId: request.id });
+						alert('Az 5 perces időablak lejárt, a tranzakció sikertelen volt. A zárolást feloldottuk, és az igényt töröltük.');
+					} catch (e) {
+						console.error('cancel failed', e);
+						alert('Az 5 perces időablak lejárt, de hiba történt a zárolás feloldásakor.');
+					}
+				} else {
+					try {
+						await handoverAction(
+							request.id,
+							actionType === 'accept_handover' ? 'reset_handover' : 'reset_return'
+						);
+					} catch (e) {
+						console.error('reset failed', e);
+					}
+					alert('Az 5 perces időablak lejárt, indítsd újra!');
 				}
-				alert('Az 5 perces időablak lejárt, indítsd újra!');
 			} else {
 				alert('Hiba történt a művelet során.');
 			}

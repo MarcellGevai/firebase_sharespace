@@ -1,9 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { chatUrl } from '$lib/chat';
-	import { X, CalendarClock, Search } from 'lucide-svelte';
+	import { X, CalendarClock, Search, CreditCard, ChevronLeft } from 'lucide-svelte';
 	import { currentUser } from '$lib/auth';
 	import { createRequest } from '$lib/data/requests';
+	import { loadStripe, type Stripe, type StripeElements } from '@stripe/stripe-js';
+	import { PUBLIC_STRIPE_KEY } from '$env/static/public';
+	import { functions } from '$lib/firebase';
+	import { httpsCallable } from 'firebase/functions';
 	import { sendMessage } from '$lib/data/messages';
 	import { createNotification } from '$lib/data/notifications';
 
@@ -34,6 +38,16 @@
 	let startDate = $state('');
 	let endDate = $state('');
 	let message = $state('');
+	
+	// Stripe states
+	let step = $state<'form' | 'payment'>('form');
+	let stripe = $state<Stripe | null>(null);
+	let elements = $state<StripeElements | null>(null);
+	let paymentElementContainer: HTMLElement;
+	let clientSecret = $state('');
+	let paymentIntentId = $state('');
+	
+	let requiresPayment = $derived(!isOffer && owner?.stripeAccountId && listing?.price_per_day);
 	let priceOffer = $state<number | ''>('');
 	let recommendedPrice = $state(0);
 	let isSubmitting = $state(false);
@@ -94,10 +108,99 @@
 			priceOffer = '';
 			startDate = '';
 			endDate = '';
+			step = 'form';
+			elements = null;
+			clientSecret = '';
+			paymentIntentId = '';
 		}
 	});
 
-	async function handleSubmit() {
+	async function handleContinueToPayment() {
+		if (!requiresPayment) return handleSubmit();
+
+		const me = $currentUser;
+		if (!me) { goto('/login'); return; }
+		if (!startDate || !endDate) { errorMsg = 'Kérlek válassz kezdő és végdátumot.'; return; }
+		if (new Date(startDate) > new Date(endDate)) { errorMsg = 'A kezdő dátum nem lehet a vég dátum után.'; return; }
+		
+		isSubmitting = true;
+		errorMsg = '';
+
+		try {
+			const sDate = new Date(startDate);
+			const eDate = new Date(endDate);
+			const rentalDays = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 3600 * 24)));
+
+			const createRentHold = httpsCallable(functions, 'createRentHold');
+			const result = await createRentHold({
+				listingId: subjectId,
+				rentalDays
+			});
+			const data = result.data as any;
+			clientSecret = data.client_secret;
+			paymentIntentId = data.id;
+
+			if (!stripe) {
+				stripe = await loadStripe(PUBLIC_STRIPE_KEY);
+			}
+
+			if (stripe && clientSecret) {
+				elements = stripe.elements({
+					clientSecret,
+					appearance: { theme: 'flat' }
+				});
+				step = 'payment';
+				
+				setTimeout(() => {
+					if (paymentElementContainer) {
+						const paymentElement = elements!.create('payment');
+						paymentElement.mount(paymentElementContainer);
+					}
+				}, 50);
+			}
+		} catch (err: any) {
+			console.error('Stripe init error:', err);
+			errorMsg = err?.message ?? 'Nem sikerült előkészíteni a fizetést.';
+		} finally {
+			isSubmitting = false;
+		}
+	}
+
+	async function handlePaymentSubmit() {
+		if (!stripe || !elements) return;
+		isSubmitting = true;
+		errorMsg = '';
+
+		try {
+			const { error, paymentIntent } = await stripe.confirmPayment({
+				elements,
+				confirmParams: {
+					return_url: window.location.href,
+				},
+				redirect: 'if_required'
+			});
+
+			if (error) {
+				errorMsg = error.message ?? 'Fizetési hiba történt.';
+				isSubmitting = false;
+				return;
+			}
+
+			if (paymentIntent && (paymentIntent.status === 'requires_capture' || paymentIntent.status === 'succeeded')) {
+				const statusStr = paymentIntent.status === 'requires_capture' ? 'held' : 'captured';
+				await handleSubmit(paymentIntent.id, statusStr);
+			} else {
+				errorMsg = 'Fizetés még feldolgozás alatt... (Kérjük próbáld újra)';
+				isSubmitting = false;
+			}
+		} catch (err: any) {
+			console.error('Stripe payment error:', err);
+			errorMsg = err?.message ?? 'Fizetési hiba történt.';
+			isSubmitting = false;
+		}
+	}
+
+	async function handleSubmit(pIntentId?: string, pStatus?: 'held' | 'captured' | 'refunded') {
 		const me = $currentUser;
 		if (!me) {
 			goto('/login');
@@ -145,7 +248,9 @@
 				end_date: endDate,
 				price_offer: Number(priceOffer),
 				item_title: subjectTitle,
-				item_image: subjectImage
+				item_image: subjectImage,
+				paymentIntentId: pIntentId,
+				paymentStatus: pStatus
 			});
 
 			// 2. Optional opening message to the other party.
@@ -234,7 +339,7 @@
 					{/if}
 				</div>
 
-				{#if isFixedAvailability}
+				{#if isFixedAvailability && step === 'form'}
 					<p class="text-xs text-primary bg-primary-soft border border-primary-line rounded-lg px-3 py-2">
 						{#if isOffer}
 							Erre az igényre {availabilityMin} és {availabilityMax} között lehet ajánlatot tenni.
@@ -244,6 +349,13 @@
 					</p>
 				{/if}
 
+				{#if step === 'payment'}
+					<div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-sm text-indigo-900 mb-4">
+						<p class="font-semibold mb-1 flex items-center gap-1.5"><CreditCard class="w-4 h-4"/> Biztonságos Fizetés</p>
+						<p class="text-indigo-700">Az összeg most csak <strong class="font-bold">zárolásra</strong> kerül a kártyádon. Csak akkor vonjuk le, ha a tulajdonos elfogadja a kérést.</p>
+					</div>
+					<div bind:this={paymentElementContainer} class="min-h-[200px]"></div>
+				{:else}
 				<!-- Form -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1.5">
@@ -280,9 +392,13 @@
 						type="number" 
 						id="price_offer" 
 						bind:value={priceOffer}
+						disabled={requiresPayment}
 						placeholder="Add meg az összeget..."
-						class="w-full px-3 py-2 bg-surface border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-semibold"
+						class="w-full px-3 py-2 bg-surface border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-semibold disabled:opacity-50 disabled:bg-raised disabled:cursor-not-allowed"
 					/>
+					{#if requiresPayment}
+						<p class="text-xs text-muted mt-1">Stripe fizetés esetén az ár nem módosítható, automatikusan a napi árból kalkulálódik.</p>
+					{/if}
 				</div>
 
 				<!-- Message -->
@@ -298,6 +414,7 @@
 						class="w-full px-3 py-2 bg-surface border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
 					></textarea>
 				</div>
+				{/if} <!-- close step === form -->
 
 				{#if errorMsg}
 					<p class="text-sm text-want bg-want-soft p-3 rounded-lg">{errorMsg}</p>
@@ -306,25 +423,51 @@
 
 			<!-- Footer -->
 			<div class="p-4 bg-raised border-t border-line flex justify-end gap-3">
-				<button 
-					onclick={onClose} 
-					class="px-5 py-2.5 text-sm font-semibold text-muted hover:bg-raised rounded-xl transition-colors"
-				>
-					Cancel
-				</button>
-				<button 
-					onclick={handleSubmit} 
-					disabled={isSubmitting}
-					class="px-5 py-2.5 text-sm font-semibold text-primary-fg bg-primary hover:bg-primary-hover rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-					{#if isSubmitting}
-						<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-						Sending...
-					{:else}
-						<CalendarClock class="w-4 h-4" />
-						{isOffer ? 'Ajánlat elküldése' : 'Submit Request'}
-					{/if}
-				</button>
+				{#if step === 'payment'}
+					<button 
+						onclick={() => step = 'form'} 
+						disabled={isSubmitting}
+						class="px-4 py-2.5 text-sm font-semibold text-muted hover:bg-surface rounded-xl transition-colors flex items-center gap-1.5"
+					>
+						<ChevronLeft class="w-4 h-4" /> Vissza
+					</button>
+					<div class="flex-1"></div>
+					<button 
+						onclick={handlePaymentSubmit} 
+						disabled={isSubmitting}
+						class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{#if isSubmitting}
+							<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+							Feldolgozás...
+						{:else}
+							<CreditCard class="w-4 h-4" />
+							Fizetés és Foglalás
+						{/if}
+					</button>
+				{:else}
+					<button 
+						onclick={onClose} 
+						class="px-5 py-2.5 text-sm font-semibold text-muted hover:bg-raised rounded-xl transition-colors"
+					>
+						Mégsem
+					</button>
+					<button 
+						onclick={handleContinueToPayment} 
+						disabled={isSubmitting}
+						class="px-5 py-2.5 text-sm font-semibold text-primary-fg bg-primary hover:bg-primary-hover rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{#if isSubmitting}
+							<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+							Kérjük várjon...
+						{:else if requiresPayment}
+							Tovább a fizetéshez
+						{:else}
+							<CalendarClock class="w-4 h-4" />
+							{isOffer ? 'Ajánlat elküldése' : 'Igény leadása'}
+						{/if}
+					</button>
+				{/if}
 			</div>
 		</div>
 	</div>

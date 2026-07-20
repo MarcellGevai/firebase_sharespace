@@ -27,6 +27,7 @@
 		"vite": "^8.0.16"
 	},
 	"dependencies": {
+		"@stripe/stripe-js": "^9.10.0",
 		"firebase": "^12.13.0",
 		"lucide-svelte": "^1.0.1",
 		"maplibre-gl": "^5.24.0",

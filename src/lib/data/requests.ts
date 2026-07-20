@@ -35,6 +35,8 @@ export type NewRequest = {
 	awaiting_response_from: string;
 	item_title?: string;
 	item_image?: string;
+	paymentIntentId?: string;
+	paymentStatus?: 'held' | 'captured' | 'refunded';
 };
 
 export async function createRequest(data: NewRequest): Promise<string> {
@@ -49,6 +51,8 @@ export async function createRequest(data: NewRequest): Promise<string> {
 		// Firestore rejects undefined outright, so these must be real strings.
 		item_title: data.item_title ?? '',
 		item_image: data.item_image ?? '',
+		paymentIntentId: data.paymentIntentId ?? null,
+		paymentStatus: data.paymentStatus ?? null,
 		participants: [data.owner_id, data.requester_id],
 		status: 'PENDING',
 		handover_status: 'PENDING',

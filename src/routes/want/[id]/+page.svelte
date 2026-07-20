@@ -6,7 +6,7 @@
 	import { chatUrl } from '$lib/chat';
 	import { currentUser } from '$lib/auth';
 
-	export let data: PageData;
+	let { data }: { data: PageData } = $props();
 	const { want, requester } = data;
 
 	let isModalOpen = $state(false);

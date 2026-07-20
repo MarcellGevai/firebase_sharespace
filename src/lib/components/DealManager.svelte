@@ -188,14 +188,15 @@
 			</div>
 			<div class="text-right">
 				<span class="block text-lg font-bold text-primary">{request.price_offer} Ft</span>
-				<span class="text-xs font-semibold px-2 py-1 rounded-full
+				<span class="text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full
 					{isRejected ? 'bg-want-soft text-want' : isClosed ? 'bg-raised text-muted' : (isHandoverCompleted && !isReturnCompleted ? 'bg-primary-soft text-primary' : 'bg-primary-soft text-primary')}">
 					{#if isRejected}Elutasítva
 					{:else if isClosed}Lezárva
-					{:else if isReturnCompleted}Visszaadva, Értékelésre vár
-					{:else if isReturnInitiated}Visszaadás folyamatban...
-					{:else if isHandoverCompleted}Bérlés alatt (Zöld)
+					{:else if isReturnCompleted}Visszaadva
+					{:else if isHandoverCompleted}Bérlés alatt
 					{:else if isHandoverInitiated}Átadás folyamatban (5 perc)...
+					{:else if isReturnInitiated}Visszaadás folyamatban (5 perc)...
+					{:else if handoverStatus === 'PENDING'}Még nem indult el
 					{:else if isAccepted}Elfogadva, Átadásra vár
 					{:else}Függőben{/if}
 				</span>
@@ -247,9 +248,13 @@
 					<span class="text-sm text-muted italic self-center">Bérlés alatt - a bérlő indítja a visszaadást.</span>
 				{/if}
 			{:else if isReturnInitiated}
-				<button onclick={() => handleAction('accept_return')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
-					<Check class="w-4 h-4" /> Visszaadás megerősítése!
-				</button>
+				{#if !isRequester}
+					<button onclick={() => handleAction('accept_return')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
+						<Check class="w-4 h-4" /> Visszaadás megerősítése!
+					</button>
+				{:else}
+					<span class="text-sm text-muted italic self-center">Várakozás a tulajdonos jóváhagyására (5 perc)...</span>
+				{/if}
 			{:else if needsReview}
 				<a href={`/review/${request.id}`} class="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 transition-colors flex items-center gap-1 animate-pulse">
 					<Star class="w-4 h-4" /> Értékelés leadása

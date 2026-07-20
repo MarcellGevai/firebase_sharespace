@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { X, Search, Tag, Info, MapPin, House, Loader2 } from 'lucide-svelte';
 	import { createWant } from '$lib/data/wants';
 	import { CATEGORIES } from '$lib/categories';
@@ -164,6 +165,7 @@
 			locationLon = null;
 
 			if (onSuccess) onSuccess();
+			goto('/feed');
 		} catch (err: any) {
 			errorMsg = err.message;
 		} finally {

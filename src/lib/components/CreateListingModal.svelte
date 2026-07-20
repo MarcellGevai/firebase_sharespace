@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { untrack } from 'svelte';
 	import { X, Package, Wrench, Briefcase, Tag, Info, LocateFixed, Home, MapPin, Loader2 } from 'lucide-svelte';
 	import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -254,6 +255,7 @@
 			type = 'ITEM';
 			
 			if (onSuccess) onSuccess();
+			goto('/feed');
 			
 		} catch (err: any) {
 			errorMsg = err.message;

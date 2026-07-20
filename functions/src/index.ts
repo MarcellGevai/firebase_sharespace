@@ -7,7 +7,7 @@
 //   firebase deploy --only functions
 //
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -447,5 +447,58 @@ export const cancelRentPayment = onCall(async (request) => {
 	} catch (error) {
 		console.error('Stripe Cancel error:', error);
 		throw new HttpsError('internal', 'Nem sikerült törölni a fizetési tranzakciót.');
+	}
+});
+
+export const stripeWebhook = onRequest(async (req, res) => {
+	const SECRET_STRIPE_KEY = process.env.SECRET_STRIPE_KEY;
+	const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+
+	if (!SECRET_STRIPE_KEY || !STRIPE_WEBHOOK_SECRET) {
+		console.error('Missing Stripe API keys in environment.');
+		res.status(500).send('Webhook error: Missing API keys');
+		return;
+	}
+
+	const stripe = new Stripe(SECRET_STRIPE_KEY);
+	const sig = req.headers['stripe-signature'];
+	let event: Stripe.Event;
+
+	try {
+		if (!sig) throw new Error('Missing stripe-signature header');
+		// `req.rawBody` is provided by Firebase Functions specifically for Stripe signature verification
+		event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
+	} catch (err: any) {
+		console.error(`Webhook signature verification failed: ${err.message}`);
+		res.status(400).send(`Webhook Error: ${err.message}`);
+		return;
+	}
+
+	// Handle the event
+	try {
+		if (event.type === 'account.updated') {
+			const account = event.data.object as Stripe.Account;
+			const stripeAccountId = account.id;
+			const chargesEnabled = account.charges_enabled;
+
+			// Find the user with this Stripe Account ID
+			const usersSnapshot = await db.collection('users').where('stripeAccountId', '==', stripeAccountId).limit(1).get();
+			
+			if (!usersSnapshot.empty) {
+				const userDoc = usersSnapshot.docs[0];
+				await userDoc.ref.update({
+					stripeChargesEnabled: chargesEnabled,
+					updated_at: FieldValue.serverTimestamp()
+				});
+				console.log(`Updated user ${userDoc.id} stripeChargesEnabled to ${chargesEnabled}`);
+			} else {
+				console.warn(`No user found with stripeAccountId: ${stripeAccountId}`);
+			}
+		}
+
+		res.json({ received: true });
+	} catch (err) {
+		console.error('Error handling webhook event:', err);
+		res.status(500).send('Internal server error');
 	}
 });

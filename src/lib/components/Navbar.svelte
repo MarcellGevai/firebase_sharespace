@@ -269,19 +269,25 @@
 	</div>
 	
 	<!-- Mobile Profile Bar (simplified) -->
-	<div class="md:hidden border-t border-line px-4 py-3 flex items-center justify-between bg-surface">
+	<div class="md:hidden border-t border-line px-2 py-2 flex items-center justify-between bg-surface">
 		{#if currentUser}
-			<a href={`/profile/${currentUser.id}`} class="flex items-center gap-3">
+			<a href={`/profile/${currentUser.id}`} class="flex items-center gap-2">
 				<img src={currentUser.avatar_url} alt={displayName(currentUser)} class="w-8 h-8 rounded-full object-cover" />
-				<span class="text-sm font-semibold text-ink">{displayName(currentUser)}</span>
+				<span class="text-sm font-semibold text-ink hidden sm:inline">{displayName(currentUser)}</span>
 			</a>
-			<div class="flex items-center gap-3">
+			<div class="flex items-center gap-1">
 				<a href="/feed" class={`p-1.5 rounded-lg transition-colors ${isActive('/feed') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Hirdetések/Igények">
 					<LayoutList class="w-5 h-5" />
 				</a>
 				<a href="/" class={`p-1.5 rounded-lg transition-colors ${isActive('/') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Térkép">
 					<Map class="w-5 h-5" />
 				</a>
+				<a href="/inbox" class={`p-1.5 rounded-lg transition-colors ${isActive('/inbox') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Üzenetek">
+					<MessageCircle class="w-5 h-5" />
+				</a>
+				<div class="p-1.5">
+					<NotificationDropdown />
+				</div>
 				<a href="/rentals" class={`p-1.5 rounded-lg transition-colors ${isActive('/rentals') ? 'bg-primary-soft text-primary' : 'text-muted hover:text-primary'}`} aria-label="Bérléseim">
 					<Clock class="w-5 h-5" />
 				</a>

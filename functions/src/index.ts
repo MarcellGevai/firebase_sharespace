@@ -476,24 +476,52 @@ export const stripeWebhook = onRequest(async (req, res) => {
 
 	// Handle the event
 	try {
-		if (event.type === 'account.updated') {
-			const account = event.data.object as Stripe.Account;
-			const stripeAccountId = account.id;
-			const chargesEnabled = account.charges_enabled;
+		switch (event.type) {
+			case 'account.updated': {
+				const account = event.data.object as Stripe.Account;
+				const stripeAccountId = account.id;
+				const chargesEnabled = account.charges_enabled;
 
-			// Find the user with this Stripe Account ID
-			const usersSnapshot = await db.collection('users').where('stripeAccountId', '==', stripeAccountId).limit(1).get();
-			
-			if (!usersSnapshot.empty) {
-				const userDoc = usersSnapshot.docs[0];
-				await userDoc.ref.update({
-					stripeChargesEnabled: chargesEnabled,
-					updated_at: FieldValue.serverTimestamp()
-				});
-				console.log(`Updated user ${userDoc.id} stripeChargesEnabled to ${chargesEnabled}`);
-			} else {
-				console.warn(`No user found with stripeAccountId: ${stripeAccountId}`);
+				const usersSnapshot = await db.collection('users').where('stripeAccountId', '==', stripeAccountId).limit(1).get();
+				if (!usersSnapshot.empty) {
+					const userDoc = usersSnapshot.docs[0];
+					await userDoc.ref.update({
+						stripeChargesEnabled: chargesEnabled,
+						updated_at: FieldValue.serverTimestamp()
+					});
+					console.log(`Updated user ${userDoc.id} stripeChargesEnabled to ${chargesEnabled}`);
+				}
+				break;
 			}
+			case 'payment_intent.succeeded': {
+				const paymentIntent = event.data.object as Stripe.PaymentIntent;
+				const reqSnapshot = await db.collection('requests').where('paymentIntentId', '==', paymentIntent.id).limit(1).get();
+				if (!reqSnapshot.empty) {
+					const reqDoc = reqSnapshot.docs[0];
+					await reqDoc.ref.update({
+						paymentStatus: 'captured',
+						updated_at: FieldValue.serverTimestamp()
+					});
+					console.log(`Updated request ${reqDoc.id} paymentStatus to captured`);
+				}
+				break;
+			}
+			case 'payment_intent.canceled':
+			case 'payment_intent.payment_failed': {
+				const paymentIntent = event.data.object as Stripe.PaymentIntent;
+				const reqSnapshot = await db.collection('requests').where('paymentIntentId', '==', paymentIntent.id).limit(1).get();
+				if (!reqSnapshot.empty) {
+					const reqDoc = reqSnapshot.docs[0];
+					await reqDoc.ref.update({
+						paymentStatus: 'canceled',
+						updated_at: FieldValue.serverTimestamp()
+					});
+					console.log(`Updated request ${reqDoc.id} paymentStatus to canceled`);
+				}
+				break;
+			}
+			default:
+				console.log(`Unhandled event type: ${event.type}`);
 		}
 
 		res.json({ received: true });

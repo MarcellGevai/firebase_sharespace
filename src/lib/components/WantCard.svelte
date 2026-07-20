@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Want } from '$lib/types';
 	import { formatDistance } from '$lib/distance';
+	import { timeAgoHU } from '$lib/timestamps';
 	import RequestModal from './RequestModal.svelte';
 	import { Search, Calendar, MapPin, HandCoins } from 'lucide-svelte';
 
@@ -40,12 +41,18 @@
 				<!-- Same slot and styling as FeedCard's, so distance reads the same on
 				     both sides of the feed. A want carries no coarse town field to sit
 				     next to it, so the pin and the distance travel together. -->
-				{#if distanceKm != null}
-					<div class="flex items-center gap-1.5 text-xs text-muted mt-0.5">
+				<div class="flex items-center gap-1.5 text-xs text-muted mt-0.5">
+					{#if distanceKm != null}
 						<MapPin class="w-3 h-3 shrink-0" />
 						<span class="font-semibold text-primary">{formatDistance(distanceKm)}</span>
-					</div>
-				{/if}
+					{/if}
+					{#if want.created_at}
+						{#if distanceKm != null}
+							<span class="text-faint" aria-hidden="true">·</span>
+						{/if}
+						<span>{timeAgoHU(want.created_at)}</span>
+					{/if}
+				</div>
 			</div>
 		</a>
 		<span class="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-want bg-want-soft px-2.5 py-1 rounded-full flex-shrink-0">

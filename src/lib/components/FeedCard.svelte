@@ -4,6 +4,7 @@
 	import RequestModal from './RequestModal.svelte';
 	import { chatUrl } from '$lib/chat';
 	import { formatDistance } from '$lib/distance';
+	import { timeAgoHU } from '$lib/timestamps';
 	import { MapPin, CalendarClock, MessageCircle } from 'lucide-svelte';
 
 	// distanceKm is null when either side has no coordinates, or when the viewer
@@ -51,6 +52,10 @@
 							<span class="text-faint" aria-hidden="true">·</span>
 						{/if}
 						<span class="font-semibold text-primary">{formatDistance(distanceKm)}</span>
+					{/if}
+					{#if listing.created_at}
+						<span class="text-faint" aria-hidden="true">·</span>
+						<span>{timeAgoHU(listing.created_at)}</span>
 					{/if}
 				</div>
 			</div>

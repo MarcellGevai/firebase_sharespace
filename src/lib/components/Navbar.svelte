@@ -132,9 +132,7 @@
 	<div class="max-w-2xl md:max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
 		<!-- Logo -->
 		<a href="/" class="flex items-center gap-2 hover:opacity-90 transition-opacity">
-			<div class="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
-				<span class="text-white font-bold text-lg leading-none">S</span>
-			</div>
+			<img src="/icon.svg" alt="ShareSpace Logo" class="w-8 h-8 drop-shadow-sm" />
 			<span class="text-xl font-bold bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent hidden sm:block">Sharespace</span>
 		</a>
 

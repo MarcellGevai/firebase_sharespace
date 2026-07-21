@@ -2,7 +2,6 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
-	import SplashScreen from '$lib/components/SplashScreen.svelte';
 	import CreateListingModal from '$lib/components/CreateListingModal.svelte';
 	import CreateRequestModal from '$lib/components/CreateRequestModal.svelte';
 	import { Plus } from 'lucide-svelte';
@@ -20,8 +19,13 @@
 
 		const removeSplash = () => {
 			if (appReady) return;
-			// A timeout can be added here if we want a smooth fade in Phase 3
-			// but for now we just toggle the boolean to unmount the Svelte component.
+			const splash = document.getElementById('sharespace-splash');
+			if (splash) {
+				splash.classList.add('splash-fade-out');
+				setTimeout(() => {
+					splash.remove();
+				}, 400);
+			}
 			appReady = true;
 			clearTimeout(splashTimeout);
 		};
@@ -101,6 +105,4 @@
 			<CreateRequestModal bind:isOpen={isRequestModalOpen} onSuccess={handleSuccess} {currentUser} />
 		{/if}
 	</div>
-{:else}
-	<SplashScreen />
 {/if}

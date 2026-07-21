@@ -251,7 +251,7 @@
 				<span class="block text-lg font-bold text-primary">{request.price_offer} Ft</span>
 				<span class="text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full
 					{isRejected ? 'bg-want-soft text-want' : isClosed ? 'bg-raised text-muted' : (isHandoverCompleted && !isReturnCompleted ? 'bg-primary-soft text-primary' : 'bg-primary-soft text-primary')}">
-					{:else if isRejected}Elutasítva
+					{#if isRejected}Elutasítva
 					{:else if isClosed}Lezárva
 					{:else if isReturnCompleted}Visszaadva
 					{:else if isHandoverCompleted}Bérlés alatt

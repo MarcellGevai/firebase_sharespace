@@ -2,9 +2,16 @@
 	// Minimal SplashScreen component
 </script>
 
-<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-[#000A17]">
-	<!-- TODO for Phase 3: Implement background-blending/masking -->
-	<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="w-full h-full object-cover" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid slice">
+<div class="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-gradient-to-tl from-[#000A17] to-[#068820]">
+	<!-- SVG sized to cover the viewport as a square, with radial mask to feather edges into the CSS background -->
+	<svg 
+		xmlns="http://www.w3.org/2000/svg" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		class="flex-shrink-0"
+		style="width: max(100vw, 100dvh); height: max(100vw, 100dvh); -webkit-mask-image: radial-gradient(circle, black 55%, transparent 100%); mask-image: radial-gradient(circle, black 55%, transparent 100%);"
+		viewBox="0 0 1024 1024" 
+		preserveAspectRatio="xMidYMid slice"
+	>
 		<defs>
 			<linearGradient id="gradient_0" gradientUnits="userSpaceOnUse" x1="841.58112" y1="1119.8573" x2="181.91887" y2="-96.35733">
 				<stop offset="0" stop-color="#000A17"/>

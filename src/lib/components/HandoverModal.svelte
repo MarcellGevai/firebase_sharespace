@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { X, Handshake, CalendarClock, Pencil } from 'lucide-svelte';
+	import { fade, scale } from 'svelte/transition';
+	import { backOut } from 'svelte/easing';
 
 	let {
 		request,
@@ -22,8 +24,8 @@
 	}
 </script>
 
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm">
-	<div class="bg-surface rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" role="dialog" aria-modal="true">
+<div transition:fade={{ duration: 200 }} class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm">
+	<div transition:scale={{ duration: 300, easing: backOut, start: 0.95 }} class="bg-surface rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" role="dialog" aria-modal="true">
 		<!-- Header -->
 		<div class="flex items-center justify-between p-4 border-b border-line">
 			<h2 class="text-lg font-bold text-ink flex items-center gap-2">

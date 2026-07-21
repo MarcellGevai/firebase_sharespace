@@ -69,6 +69,26 @@ export async function getRequest(id: string): Promise<DealRequest | null> {
 	return { id: snap.id, ...(snap.data() as Omit<DealRequest, 'id'>) };
 }
 
+export function watchRequest(
+	id: string,
+	cb: (request: DealRequest | null) => void
+): () => void {
+	return onSnapshot(
+		doc(db, 'requests', id),
+		(snap) => {
+			if (!snap.exists()) {
+				cb(null);
+			} else {
+				cb({ id: snap.id, ...(snap.data() as Omit<DealRequest, 'id'>) });
+			}
+		},
+		(err) => {
+			console.error('watchRequest error', err);
+			cb(null);
+		}
+	);
+}
+
 /** The most recent deal for this listing between the two users, or null. */
 export async function getRequestForConversation(
 	listingId: string,
@@ -131,6 +151,28 @@ export async function getMyRentals(uid: string): Promise<DealRequest[]> {
 	);
 	const snap = await getDocs(q);
 	return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<DealRequest, 'id'>) }));
+}
+
+/** Live version of getMyRentals */
+export function watchMyRentals(
+	uid: string,
+	cb: (requests: DealRequest[]) => void
+): () => void {
+	const q = query(
+		collection(db, 'requests'),
+		where('participants', 'array-contains', uid),
+		orderBy('created_at', 'desc')
+	);
+	return onSnapshot(
+		q,
+		(snap) => {
+			cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<DealRequest, 'id'>) })));
+		},
+		(err) => {
+			console.error('watchMyRentals error', err);
+			cb([]);
+		}
+	);
 }
 
 export type HandoverAction =

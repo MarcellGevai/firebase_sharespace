@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { chatUrl } from '$lib/chat';
@@ -12,6 +12,12 @@
 	let profiles = $state<Record<string, { name: string; avatar_url: string }>>({});
 	let listingDetails = $state<Record<string, { category: string }>>({});
 	let loaded = $state(false);
+
+	let unsubscribeInbox: (() => void) | null = null;
+
+	onDestroy(() => {
+		if (unsubscribeInbox) unsubscribeInbox();
+	});
 
 	let conversations = $derived(
 		raw.map((c) => ({
@@ -44,13 +50,12 @@
 			goto('/login');
 			return;
 		}
-		const unsub = watchInbox(me.id, (list) => {
+		unsubscribeInbox = watchInbox(me.id, (list) => {
 			raw = list;
 			loaded = true;
 			ensureProfiles(list);
 			ensureListings(list);
 		});
-		return () => unsub();
 	});
 
 	function formatDate(dateString: string) {

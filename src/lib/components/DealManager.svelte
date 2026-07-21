@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Handshake, Undo2, Check, Star, Pencil } from 'lucide-svelte';
+	import { fade, slide } from 'svelte/transition';
 	import HandoverModal from './HandoverModal.svelte';
 	import { handoverAction, reviseAcceptedDeal, modifyOffer } from '$lib/data/requests';
 	import { functions } from '$lib/firebase';
@@ -47,6 +48,34 @@
 	// Both parties must review; the CTA stays until THIS user has submitted theirs.
 	let hasReviewed = $derived(request?.has_reviewed === true);
 	let needsReview = $derived((isReturnCompleted || isClosed) && !hasReviewed);
+
+	let timerInterval: ReturnType<typeof setInterval>;
+	let timeRemaining = $state(0);
+
+	$effect(() => {
+		if (isHandoverInitiated || isReturnInitiated) {
+			const initiatedAt = isHandoverInitiated ? request?.handover_initiated_at : request?.return_initiated_at;
+			if (initiatedAt) {
+				const startMs = initiatedAt.seconds ? initiatedAt.seconds * 1000 : new Date(initiatedAt).getTime();
+				const endMs = startMs + 5 * 60 * 1000;
+				
+				const updateTimer = () => {
+					const now = Date.now();
+					timeRemaining = Math.max(0, Math.floor((endMs - now) / 1000));
+				};
+				
+				updateTimer();
+				clearInterval(timerInterval);
+				timerInterval = setInterval(updateTimer, 1000);
+			}
+		} else {
+			clearInterval(timerInterval);
+		}
+		
+		return () => clearInterval(timerInterval);
+	});
+
+	let formatTimer = $derived(`${Math.floor(timeRemaining / 60)}:${(timeRemaining % 60).toString().padStart(2, '0')}`);
 
 	async function handleAction(
 		actionType:
@@ -222,12 +251,12 @@
 				<span class="block text-lg font-bold text-primary">{request.price_offer} Ft</span>
 				<span class="text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full
 					{isRejected ? 'bg-want-soft text-want' : isClosed ? 'bg-raised text-muted' : (isHandoverCompleted && !isReturnCompleted ? 'bg-primary-soft text-primary' : 'bg-primary-soft text-primary')}">
-					{#if isRejected}Elutasítva
+					{:else if isRejected}Elutasítva
 					{:else if isClosed}Lezárva
 					{:else if isReturnCompleted}Visszaadva
 					{:else if isHandoverCompleted}Bérlés alatt
-					{:else if isHandoverInitiated}Átadás folyamatban (5 perc)...
-					{:else if isReturnInitiated}Visszaadás folyamatban (5 perc)...
+					{:else if isHandoverInitiated}Átadás folyamatban ({formatTimer})...
+					{:else if isReturnInitiated}Visszaadás folyamatban ({formatTimer})...
 					{:else if handoverStatus === 'PENDING'}Még nem indult el
 					{:else if isAccepted}Elfogadva, Átadásra vár
 					{:else}Függőben{/if}
@@ -237,69 +266,69 @@
 
 		<div class="flex gap-2 justify-end mt-2">
 			{#if isRejected}
-				<span class="text-sm text-muted italic">Az ajánlatot elutasították.</span>
+				<span transition:fade={{duration: 200}} class="text-sm text-muted italic">Az ajánlatot elutasították.</span>
 			{:else if isPending}
 				{#if isMyTurn}
-					<button onclick={() => handleAction('reject_deal')} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors">
+					<button transition:fade={{duration: 200}} onclick={() => handleAction('reject_deal')} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors">
 						Visszautasít
 					</button>
-					<button onclick={openModifyOffer} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors flex items-center gap-1">
+					<button transition:fade={{duration: 200}} onclick={openModifyOffer} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors flex items-center gap-1">
 						<Pencil class="w-4 h-4" /> Ajánlat módosítása
 					</button>
-					<button onclick={() => handleAction('accept_deal')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors">
+					<button transition:fade={{duration: 200}} onclick={() => handleAction('accept_deal')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors">
 						Ajánlat Elfogadása
 					</button>
 				{:else}
-					<span class="text-sm text-muted italic">Várakozás a másik fél válaszára...</span>
+					<span transition:fade={{duration: 200}} class="text-sm text-muted italic">Várakozás a másik fél válaszára...</span>
 				{/if}
 			{:else if isAccepted && handoverStatus === 'PENDING'}
-				<button onclick={openEditTerms} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors flex items-center gap-1">
+				<button transition:fade={{duration: 200}} onclick={openEditTerms} class="px-4 py-2 bg-surface border border-line text-muted rounded-lg text-sm font-semibold hover:bg-raised transition-colors flex items-center gap-1">
 					<Pencil class="w-4 h-4" /> Részletek módosítása
 				</button>
 				{#if !isRequester}
-					<button onclick={() => showHandoverModal = true} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1">
+					<button transition:fade={{duration: 200}} onclick={() => showHandoverModal = true} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1">
 						<Handshake class="w-4 h-4" /> Csere / Átadás
 					</button>
 				{:else}
-					<span class="text-sm text-muted italic self-center">Várakozás a tulajdonosra az átadás indításához...</span>
+					<span transition:fade={{duration: 200}} class="text-sm text-muted italic self-center">Várakozás a tulajdonosra az átadás indításához...</span>
 				{/if}
 			{:else if isHandoverInitiated}
 				{#if isRequester}
-					<button onclick={() => handleAction('accept_handover')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
-						<Check class="w-4 h-4" /> Átadás megerősítése!
+					<button transition:fade={{duration: 200}} onclick={() => handleAction('accept_handover')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
+						<Check class="w-4 h-4" /> Átadás megerősítése ({formatTimer})!
 					</button>
 				{:else}
-					<span class="text-sm text-muted italic self-center">Várakozás a másik fél megerősítésére (5 percen belül)...</span>
+					<span transition:fade={{duration: 200}} class="text-sm text-muted italic self-center">Várakozás a másik fél megerősítésére ({formatTimer})...</span>
 				{/if}
 			{:else if isHandoverCompleted}
 				{#if isRequester}
-					<button onclick={() => handleAction('init_return')} class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-progress transition-colors flex items-center gap-1">
+					<button transition:fade={{duration: 200}} onclick={() => handleAction('init_return')} class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-progress transition-colors flex items-center gap-1">
 						<Undo2 class="w-4 h-4" /> Visszaadás indítása
 					</button>
 				{:else}
-					<span class="text-sm text-muted italic self-center">Bérlés alatt - a bérlő indítja a visszaadást.</span>
+					<span transition:fade={{duration: 200}} class="text-sm text-muted italic self-center">Bérlés alatt - a bérlő indítja a visszaadást.</span>
 				{/if}
 			{:else if isReturnInitiated}
 				{#if !isRequester}
-					<button onclick={() => handleAction('accept_return')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
-						<Check class="w-4 h-4" /> Visszaadás megerősítése!
+					<button transition:fade={{duration: 200}} onclick={() => handleAction('accept_return')} class="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-1 animate-pulse shadow-[0_0_15px_rgba(22,163,74,0.5)]">
+						<Check class="w-4 h-4" /> Visszaadás megerősítése ({formatTimer})!
 					</button>
 				{:else}
-					<span class="text-sm text-muted italic self-center">Várakozás a tulajdonos jóváhagyására (5 perc)...</span>
+					<span transition:fade={{duration: 200}} class="text-sm text-muted italic self-center">Várakozás a tulajdonos jóváhagyására ({formatTimer})...</span>
 				{/if}
 			{:else if needsReview}
-				<a href={`/review/${request.id}`} class="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 transition-colors flex items-center gap-1 animate-pulse">
+				<a transition:fade={{duration: 200}} href={`/review/${request.id}`} class="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 transition-colors flex items-center gap-1 animate-pulse">
 					<Star class="w-4 h-4" /> Értékelés leadása
 				</a>
 			{:else if hasReviewed && !isClosed}
-				<span class="text-sm text-muted italic flex items-center gap-1">
+				<span transition:fade={{duration: 200}} class="text-sm text-muted italic flex items-center gap-1">
 					<Check class="w-4 h-4 text-primary" /> Értékelésed leadva – várakozás a másik félre...
 				</span>
 			{/if}
 		</div>
 
 		{#if showEditTerms}
-			<div class="border-t border-line pt-3 space-y-3">
+			<div transition:slide={{duration: 200}} class="border-t border-line pt-3 space-y-3 mt-3">
 				<p class="text-xs text-warn bg-warn-soft border border-warn rounded-lg px-3 py-2 flex items-start gap-1.5">
 					<Pencil class="w-3.5 h-3.5 mt-0.5 shrink-0" />
 					<span>A módosítást a másik félnek újra el kell fogadnia, és az átadás csak ezután indítható.</span>
@@ -356,7 +385,7 @@
 		{/if}
 
 		{#if showModifyOffer}
-			<div class="border-t border-line pt-3 space-y-3">
+			<div transition:slide={{duration: 200}} class="border-t border-line pt-3 space-y-3 mt-3">
 				<p class="text-xs text-muted flex items-center gap-1">
 					<Pencil class="w-3.5 h-3.5" /> Új ajánlat küldése - a másik félnek kell rá válaszolnia.
 				</p>

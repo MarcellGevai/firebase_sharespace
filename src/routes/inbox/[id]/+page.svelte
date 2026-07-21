@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ArrowLeft, Send } from 'lucide-svelte';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -29,6 +29,14 @@
 	let notFound = $state(false);
 	let chatContainer: HTMLElement | undefined = $state();
 	let content = $state('');
+
+	let unsubscribeDeal: (() => void) | null = null;
+	let unsubscribeMessages: (() => void) | null = null;
+
+	onDestroy(() => {
+		if (unsubscribeDeal) unsubscribeDeal();
+		if (unsubscribeMessages) unsubscribeMessages();
+	});
 
 	// Scroll to the newest message whenever the thread updates.
 	$effect(() => {
@@ -90,9 +98,6 @@
 		}
 		const { listingId, otherUserId } = parsed;
 
-		let unsubMessages = () => {};
-		let unsubRequest = () => {};
-
 		(async () => {
 			const [otherUser, listing] = await Promise.all([
 				getUserProfile(otherUserId),
@@ -106,7 +111,7 @@
 
 			// Live deal/offer state - updates automatically when either party
 			// accepts/rejects/initiates handover/etc, no manual refresh needed.
-			unsubRequest = watchRequestForConversation(listingId, me.id, otherUserId, async (req) => {
+			unsubscribeDeal = watchRequestForConversation(listingId, me.id, otherUserId, async (req) => {
 				if (req) {
 					req.has_reviewed = await hasReviewed(req.id, me.id);
 				}
@@ -115,15 +120,10 @@
 
 			// Mark inbound messages read, then subscribe for realtime updates.
 			markConversationRead(listingId, me.id, otherUserId).catch(() => {});
-			unsubMessages = watchConversation(listingId, me.id, otherUserId, (list) => {
+			unsubscribeMessages = watchConversation(listingId, me.id, otherUserId, (list) => {
 				messages = list;
 			});
 		})();
-
-		return () => {
-			unsubMessages();
-			unsubRequest();
-		};
 	});
 </script>
 

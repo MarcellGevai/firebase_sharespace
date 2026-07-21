@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Bell, MessageCircle, CalendarClock } from 'lucide-svelte';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { currentUser } from '$lib/auth';
@@ -12,6 +12,14 @@
 	let notifications = $state<any[]>([]);
 	let loading = $state(true);
 	let dropdownRef: HTMLDivElement | undefined = $state();
+
+	let unsubscribeCount: (() => void) | null = null;
+	let unsubscribeList: (() => void) | null = null;
+
+	onDestroy(() => {
+		if (unsubscribeCount) unsubscribeCount();
+		if (unsubscribeList) unsubscribeList();
+	});
 
 	function formatRelativeTime(value: unknown): string {
 		let ms: number;
@@ -70,12 +78,10 @@
 		document.addEventListener('click', handleClickOutside, true);
 
 		const me = get(currentUser);
-		let unsubCount = () => {};
-		let unsubList = () => {};
 		if (me) {
 			// Live badge + live list, straight from Firestore. No polling needed.
-			unsubCount = watchUnreadCount(me.id, (n) => (unreadCount = n));
-			unsubList = watchNotifications(me.id, (list) => {
+			unsubscribeCount = watchUnreadCount(me.id, (n) => (unreadCount = n));
+			unsubscribeList = watchNotifications(me.id, (list) => {
 				notifications = list;
 				loading = false;
 			});
@@ -85,8 +91,6 @@
 
 		return () => {
 			document.removeEventListener('click', handleClickOutside, true);
-			unsubCount();
-			unsubList();
 		};
 	});
 </script>

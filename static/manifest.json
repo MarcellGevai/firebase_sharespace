@@ -8,7 +8,7 @@
   "description": "Közösségi eszközkölcsönzés és szolgáltatásmegosztás egyszerűen, biztonságosan.",
   "icons": [
     {
-      "src": "/old-icon.svg",
+      "src": "/icon.svg",
       "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any maskable"

@@ -7,7 +7,7 @@
 
 		<!-- PWA Meta Tags -->
 		<link rel="manifest" href="%sveltekit.assets%/manifest.json" />
-		<meta name="theme-color" content="#15803d" />
+		<meta name="theme-color" content="#0f172a" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/icon.svg" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -28,9 +28,58 @@
 				/* private mode / storage blocked: fall through to light */
 			}
 		</script>
+		<style>
+			#sharespace-splash {
+				position: fixed;
+				inset: 0;
+				z-index: 9999;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background-color: #ffffff;
+				transition: opacity 400ms ease-in-out;
+				color: #0f172a;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				#sharespace-splash {
+					background-color: #0f172a;
+					color: #ffffff;
+				}
+			}
+
+			#sharespace-splash.splash-fade-out {
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			.splash-logo {
+				width: 64px;
+				height: 64px;
+				animation: splash-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+			}
+
+			@keyframes splash-pulse {
+				0%, 100% {
+					opacity: 1;
+					transform: scale(1);
+				}
+				50% {
+					opacity: 0.5;
+					transform: scale(0.95);
+				}
+			}
+		</style>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<div id="sharespace-splash">
+			<svg class="splash-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+				<path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+				<path d="M2 17l10 5 10-5"></path>
+				<path d="M2 12l10 5 10-5"></path>
+			</svg>
+		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

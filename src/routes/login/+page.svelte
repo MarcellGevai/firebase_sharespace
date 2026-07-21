@@ -2,6 +2,7 @@
 	import { LogIn, CheckCircle2 } from 'lucide-svelte';
 	import { page } from '$app/stores';
 	import { login, loginWithGoogle, authErrorMessage } from '$lib/auth';
+	import LogoLoader from '$lib/components/LogoLoader.svelte';
 
 	let email = $state('');
 	let password = $state('');
@@ -47,6 +48,10 @@
 <svelte:head>
 	<title>Bejelentkezés - Sharespace</title>
 </svelte:head>
+
+{#if isSubmitting}
+	<LogoLoader fullScreen={true} />
+{/if}
 
 <div class="max-w-md mx-auto mt-12 bg-surface p-8 rounded-2xl shadow-sm border border-line">
 	<div class="text-center mb-8">

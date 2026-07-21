@@ -29,39 +29,11 @@
 			}
 		</script>
 		<style>
-			#sharespace-splash {
-				position: fixed;
-				inset: 0;
-				z-index: 9999;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				background: linear-gradient(135deg, #34d399 0%, #059669 50%, #064e3b 100%);
-				transition: opacity 400ms ease-in-out;
-			}
-
-			#sharespace-splash.splash-fade-out {
-				opacity: 0;
-				pointer-events: none;
-			}
-
-			@keyframes pulse {
-				0%, 100% {
-					opacity: 1;
-					transform: scale(1);
-				}
-				50% {
-					opacity: 0.7;
-					transform: scale(0.95);
-				}
-			}
+			/* Wait for Phase 3 for complex background-blending/masking */
 		</style>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<div id="sharespace-splash">
-			<img src="%sveltekit.assets%/icon.svg" alt="ShareSpace" style="width: 120px; height: 120px; animation: pulse 2s infinite;" />
-		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

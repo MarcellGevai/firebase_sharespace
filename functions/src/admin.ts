@@ -4,8 +4,9 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getApp } from 'firebase-admin/app';
 
-const db = getFirestore();
+const db = getFirestore(getApp(), 'sharespace-db');
 const auth = getAuth();
 
 // ── helpers ──────────────────────────────────────────────────────────────────

@@ -9,12 +9,12 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { initializeApp } from 'firebase-admin/app';
+import { initializeApp, getApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import Stripe from 'stripe';
 
 initializeApp();
-const db = getFirestore();
+const db = getFirestore(getApp(), 'sharespace-db');
 
 // Admin functions (moderation, user management, stats)
 export {

@@ -98,3 +98,34 @@ export async function callGetStats(): Promise<PlatformStats> {
 	const result = await httpsCallable(functions, 'adminGetStats')({});
 	return result.data as PlatformStats;
 }
+
+export async function callListListings(): Promise<any[]> {
+	const result = await httpsCallable(functions, 'adminListListings')({});
+	return (result.data as any).listings;
+}
+
+export async function callListWants(): Promise<any[]> {
+	const result = await httpsCallable(functions, 'adminListWants')({});
+	return (result.data as any).wants;
+}
+
+export async function callSearchUserByEmail(email: string): Promise<any> {
+	const result = await httpsCallable(functions, 'adminSearchUserByEmail')({ email });
+	return (result.data as any).user;
+}
+
+export async function callUpdateTrustScore(uid: string, score: number): Promise<void> {
+	await httpsCallable(functions, 'adminUpdateTrustScore')({ uid, score });
+}
+
+export async function callListRequests(): Promise<any[]> {
+	const result = await httpsCallable(functions, 'adminListRequests')({});
+	return (result.data as any).requests;
+}
+
+export async function callDeleteAllListings(): Promise<void> {
+	await httpsCallable(functions, 'adminDeleteAllListings')({});
+}
+
+
+

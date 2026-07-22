@@ -16,6 +16,16 @@ import Stripe from 'stripe';
 initializeApp();
 const db = getFirestore();
 
+// Admin functions (moderation, user management, stats)
+export {
+	setAdminClaim, removeAdminClaim, adminListUsers,
+	banUser, unbanUser, adminDeleteListing, adminDeleteWant,
+	adminReviewReport, adminGetStats,
+	adminListListings, adminListWants,
+	adminSearchUserByEmail, adminUpdateTrustScore,
+	adminListRequests, adminDeleteAllListings
+} from './admin';
+
 /**
  * Keep the denormalized `owner_trust_score` on every listing in sync when a
  * user's trust score changes. The client can't do this (it can only write its

@@ -23,7 +23,9 @@ export {
 	adminReviewReport, adminGetStats,
 	adminListListings, adminListWants,
 	adminSearchUserByEmail, adminUpdateTrustScore,
-	adminListRequests, adminDeleteAllListings
+	adminListRequests, adminDeleteAllListings,
+	adminDeleteAllWants,
+	adminDeleteRequest
 } from './admin';
 
 /**

@@ -127,5 +127,10 @@ export async function callDeleteAllListings(): Promise<void> {
 	await httpsCallable(functions, 'adminDeleteAllListings')({});
 }
 
+export async function callDeleteAllWants(): Promise<void> {
+	await httpsCallable(functions, 'adminDeleteAllWants')({});
+}
 
-
+export async function callDeleteRequest(requestId: string): Promise<void> {
+	await httpsCallable(functions, 'adminDeleteRequest')({ requestId });
+}

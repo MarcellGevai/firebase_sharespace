@@ -216,6 +216,24 @@
 		} catch (e) { alert('Hiba: ' + (e as Error).message); }
 	}
 
+	async function handleDeleteAllWants() {
+		if (!confirm('FIGYELEM: Biztosan törlöd a platform összes igényét? Ez a művelet nem vonható vissza!')) return;
+		
+		const verify = prompt('Kérlek írd be, hogy "TÖRLÉS", ha biztos vagy benne:');
+		if (verify !== 'TÖRLÉS') return;
+
+		try {
+			contentLoading = true;
+			await callDeleteAllWants();
+			adminWants = [];
+			alert('Minden igény sikeresen törölve.');
+		} catch (e) { 
+			alert('Hiba: ' + (e as Error).message); 
+		} finally {
+			contentLoading = false;
+		}
+	}
+
 	// ── Deals state ──────────────────────────────────────────────────────────
 	let adminDeals = $state<any[]>([]);
 	let dealsLoading = $state(false);
@@ -228,6 +246,14 @@
 			console.error('Failed to load deals:', e);
 		}
 		dealsLoading = false;
+	}
+
+	async function handleDeleteDeal(id: string) {
+		if (!confirm('Biztosan törlöd ezt a tranzakciót/beszélgetést? Ezzel az összes hozzá tartozó üzenet is elvész!')) return;
+		try {
+			await callDeleteRequest(id);
+			adminDeals = adminDeals.filter(d => d.id !== id);
+		} catch (e) { alert('Hiba: ' + (e as Error).message); }
 	}
 
 	// ── System config state ──────────────────────────────────────────────────
@@ -732,7 +758,15 @@
 
 				<!-- Wants -->
 				<div class="space-y-4">
-					<h3 class="text-lg font-medium text-slate-300">Igények ({adminWants.length})</h3>
+					<div class="flex items-center justify-between">
+						<h3 class="text-lg font-medium text-slate-300">Igények ({adminWants.length})</h3>
+						{#if adminWants.length > 0}
+							<button onclick={handleDeleteAllWants} class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-400 bg-red-400/10 hover:bg-red-400/20 rounded-lg transition-colors border border-red-500/20">
+								<Trash2 class="w-3.5 h-3.5" />
+								Összes törlése
+							</button>
+						{/if}
+					</div>
 					{#if adminWants.length === 0}
 						<div class="text-center py-8 text-slate-500 bg-slate-900/50 rounded-xl border border-slate-800">
 							Nincs igény.
@@ -805,6 +839,7 @@
 								<th class="px-4 py-3">Ár</th>
 								<th class="px-4 py-3">Státusz</th>
 								<th class="px-4 py-3 text-right">Létrehozva</th>
+								<th class="px-4 py-3 text-right">Művelet</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-slate-800">
@@ -834,6 +869,11 @@
 									</td>
 									<td class="px-4 py-3 text-right text-slate-500 text-xs whitespace-nowrap">
 										{formatDate(deal.created_at)}
+									</td>
+									<td class="px-4 py-3 text-right">
+										<button onclick={() => handleDeleteDeal(deal.id)} class="p-1.5 text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-500/10 rounded-lg transition-colors" title="Beszélgetés törlése">
+											<Trash2 class="w-4 h-4" />
+										</button>
 									</td>
 								</tr>
 							{/each}

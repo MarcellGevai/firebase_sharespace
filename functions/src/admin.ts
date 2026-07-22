@@ -112,7 +112,15 @@ export const adminDeleteListing = onCall(async (request) => {
 	const snap = await ref.get();
 	if (!snap.exists) throw new HttpsError('not-found', 'A hirdetés nem található.');
 
-	await ref.delete();
+	// Cascade delete
+	const batch = db.batch();
+	const reqs = await db.collection('requests').where('listing_id', '==', listingId).get();
+	reqs.docs.forEach(d => batch.delete(d.ref));
+	const msgs = await db.collection('messages').where('listing_id', '==', listingId).get();
+	msgs.docs.forEach(d => batch.delete(d.ref));
+	batch.delete(ref);
+	await batch.commit();
+
 	return { success: true };
 });
 
@@ -126,7 +134,15 @@ export const adminDeleteWant = onCall(async (request) => {
 	const snap = await ref.get();
 	if (!snap.exists) throw new HttpsError('not-found', 'Az igény nem található.');
 
-	await ref.delete();
+	// Cascade delete
+	const batch = db.batch();
+	const reqs = await db.collection('requests').where('listing_id', '==', wantId).get();
+	reqs.docs.forEach(d => batch.delete(d.ref));
+	const msgs = await db.collection('messages').where('listing_id', '==', wantId).get();
+	msgs.docs.forEach(d => batch.delete(d.ref));
+	batch.delete(ref);
+	await batch.commit();
+
 	return { success: true };
 });
 
@@ -284,10 +300,24 @@ export const adminDeleteAllListings = onCall(async (request) => {
 			return;
 		}
 
+	// We process in small chunks of 20 to avoid exceeding the 500 operations batch limit
+	// since we are also fetching and deleting requests and messages.
+	async function deleteQueryBatch(query: any, resolve: any, reject: any) {
+		const snapshot = await query.get();
+		if (snapshot.size === 0) {
+			resolve();
+			return;
+		}
+
 		const batch = db.batch();
-		snapshot.docs.forEach((doc: any) => {
+		for (const doc of snapshot.docs) {
+			const id = doc.id;
+			const reqs = await db.collection('requests').where('listing_id', '==', id).get();
+			reqs.docs.forEach(d => batch.delete(d.ref));
+			const msgs = await db.collection('messages').where('listing_id', '==', id).get();
+			msgs.docs.forEach(d => batch.delete(d.ref));
 			batch.delete(doc.ref);
-		});
+		}
 		await batch.commit();
 
 		process.nextTick(() => {
@@ -295,10 +325,63 @@ export const adminDeleteAllListings = onCall(async (request) => {
 		});
 	}
 
-	const query = listingsRef.limit(400);
+	const query = listingsRef.limit(20);
 	await new Promise((resolve, reject) => {
 		deleteQueryBatch(query, resolve, reject);
 	});
+
+	return { success: true };
+});
+
+export const adminDeleteAllWants = onCall(async (request) => {
+	assertAdmin(request);
+	const wantsRef = db.collection('wants');
+
+	async function deleteQueryBatch(query: any, resolve: any, reject: any) {
+		const snapshot = await query.get();
+		if (snapshot.size === 0) {
+			resolve();
+			return;
+		}
+
+		const batch = db.batch();
+		for (const doc of snapshot.docs) {
+			const id = doc.id;
+			const reqs = await db.collection('requests').where('listing_id', '==', id).get();
+			reqs.docs.forEach(d => batch.delete(d.ref));
+			const msgs = await db.collection('messages').where('listing_id', '==', id).get();
+			msgs.docs.forEach(d => batch.delete(d.ref));
+			batch.delete(doc.ref);
+		}
+		await batch.commit();
+
+		process.nextTick(() => {
+			deleteQueryBatch(query, resolve, reject);
+		});
+	}
+
+	const query = wantsRef.limit(20);
+	await new Promise((resolve, reject) => {
+		deleteQueryBatch(query, resolve, reject);
+	});
+
+	return { success: true };
+});
+
+export const adminDeleteRequest = onCall(async (request) => {
+	assertAdmin(request);
+	const { requestId } = request.data;
+	if (!requestId || typeof requestId !== 'string') throw new HttpsError('invalid-argument', 'requestId megadása kötelező.');
+
+	const ref = db.collection('requests').doc(requestId);
+	const snap = await ref.get();
+	if (!snap.exists) throw new HttpsError('not-found', 'A tranzakció nem található.');
+
+	const batch = db.batch();
+	const msgs = await db.collection('messages').where('conversation_id', '==', requestId).get();
+	msgs.docs.forEach(d => batch.delete(d.ref));
+	batch.delete(ref);
+	await batch.commit();
 
 	return { success: true };
 });

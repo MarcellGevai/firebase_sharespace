@@ -294,16 +294,6 @@ export const adminDeleteAllListings = onCall(async (request) => {
 	
 	async function deleteQueryBatch(query: any, resolve: any, reject: any) {
 		const snapshot = await query.get();
-		const batchSize = snapshot.size;
-		if (batchSize === 0) {
-			resolve();
-			return;
-		}
-
-	// We process in small chunks of 20 to avoid exceeding the 500 operations batch limit
-	// since we are also fetching and deleting requests and messages.
-	async function deleteQueryBatch(query: any, resolve: any, reject: any) {
-		const snapshot = await query.get();
 		if (snapshot.size === 0) {
 			resolve();
 			return;
